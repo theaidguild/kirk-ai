@@ -74,3 +74,4 @@ tmp/
 
 # Local development tools
 .tool-versions
+tpusa_crawl
