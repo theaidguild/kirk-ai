@@ -11,10 +11,10 @@ import (
 
 var (
 	// Global flags
-	baseURL     string
-	model       string
-	verbose     bool
-	stream      bool
+	baseURL      string
+	model        string
+	verbose      bool
+	stream       bool
 	ollamaClient *client.OllamaClient
 )
 

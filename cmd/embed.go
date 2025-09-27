@@ -19,7 +19,7 @@ var embedCmd = &cobra.Command{
 
 func runEmbedCommand(cmd *cobra.Command, args []string) {
 	text := strings.Join(args, " ")
-	
+
 	selectedModel := model
 	if selectedModel == "" {
 		// Auto-select an embedding model
@@ -54,7 +54,7 @@ func runEmbedCommand(cmd *cobra.Command, args []string) {
 	if verbose {
 		fmt.Printf("Embedding vector (dimension: %d):\n", len(response.Embedding))
 	}
-	
+
 	// Print embeddings in a readable format
 	fmt.Print("[")
 	for i, val := range response.Embedding {

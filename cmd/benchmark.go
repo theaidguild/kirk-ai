@@ -10,9 +10,9 @@ import (
 )
 
 var (
-	benchmarkAll     bool
-	benchmarkModel   string
-	benchmarkQuick   bool
+	benchmarkAll   bool
+	benchmarkModel string
+	benchmarkQuick bool
 )
 
 // benchmarkCmd represents the benchmark command
@@ -30,14 +30,14 @@ func runBenchmarkCommand(cmd *cobra.Command, args []string) {
 		fmt.Printf("Error getting models: %v\n", err)
 		os.Exit(1)
 	}
-	
+
 	if len(models) == 0 {
 		fmt.Println("No models found. Please install a model first using 'ollama pull <model-name>'")
 		os.Exit(1)
 	}
 
 	var modelsToTest []string
-	
+
 	if benchmarkModel != "" {
 		// Test specific model
 		found := false
@@ -82,23 +82,23 @@ func runBenchmarkCommand(cmd *cobra.Command, args []string) {
 
 	// Define benchmark tests
 	tests := getBenchmarkTests(benchmarkQuick)
-	
+
 	// Results storage
 	results := make(map[string][]BenchmarkResult)
 
 	for _, modelName := range modelsToTest {
 		fmt.Printf("Testing model: %s\n", modelName)
 		fmt.Println(strings.Repeat("-", 50))
-		
+
 		modelResults := make([]BenchmarkResult, 0, len(tests))
-		
+
 		for i, test := range tests {
 			fmt.Printf("[%d/%d] %s... ", i+1, len(tests), test.Name)
-			
+
 			start := time.Now()
 			response, err := ollamaClient.Chat(modelName, test.Prompt)
 			duration := time.Since(start)
-			
+
 			if err != nil {
 				fmt.Printf("FAILED (%v)\n", err)
 				modelResults = append(modelResults, BenchmarkResult{
@@ -109,14 +109,14 @@ func runBenchmarkCommand(cmd *cobra.Command, args []string) {
 				})
 				continue
 			}
-			
+
 			tokensPerSecond := 0.0
 			if response.EvalCount > 0 && response.EvalDuration > 0 {
 				tokensPerSecond = float64(response.EvalCount) / (float64(response.EvalDuration) / 1e9)
 			}
-			
+
 			fmt.Printf("OK (%.2fs, %.1f tokens/s)\n", duration.Seconds(), tokensPerSecond)
-			
+
 			modelResults = append(modelResults, BenchmarkResult{
 				TestName:        test.Name,
 				Success:         true,
@@ -126,7 +126,7 @@ func runBenchmarkCommand(cmd *cobra.Command, args []string) {
 				TotalTokens:     response.EvalCount,
 			})
 		}
-		
+
 		results[modelName] = modelResults
 		fmt.Println()
 	}
@@ -189,16 +189,16 @@ func getBenchmarkTests(quick bool) []BenchmarkTest {
 func printBenchmarkSummary(results map[string][]BenchmarkResult) {
 	fmt.Println("BENCHMARK SUMMARY")
 	fmt.Println(strings.Repeat("=", 60))
-	
+
 	for modelName, modelResults := range results {
 		fmt.Printf("\nModel: %s\n", modelName)
 		fmt.Println(strings.Repeat("-", 30))
-		
+
 		successCount := 0
 		totalDuration := time.Duration(0)
 		totalTokensPerSecond := 0.0
 		validTokenTests := 0
-		
+
 		for _, result := range modelResults {
 			if result.Success {
 				successCount++
@@ -209,18 +209,18 @@ func printBenchmarkSummary(results map[string][]BenchmarkResult) {
 				}
 			}
 		}
-		
+
 		fmt.Printf("Tests passed: %d/%d\n", successCount, len(modelResults))
 		if successCount > 0 {
 			avgDuration := totalDuration / time.Duration(successCount)
 			fmt.Printf("Average response time: %.2fs\n", avgDuration.Seconds())
-			
+
 			if validTokenTests > 0 {
 				avgTokensPerSecond := totalTokensPerSecond / float64(validTokenTests)
 				fmt.Printf("Average tokens/sec: %.1f\n", avgTokensPerSecond)
 			}
 		}
-		
+
 		// Show failed tests
 		for _, result := range modelResults {
 			if !result.Success {
@@ -233,17 +233,17 @@ func printBenchmarkSummary(results map[string][]BenchmarkResult) {
 	if len(results) > 1 {
 		fmt.Println("\nMODEL COMPARISON")
 		fmt.Println(strings.Repeat("=", 60))
-		
+
 		bestSpeed := ""
 		bestSpeedValue := 0.0
 		bestReliability := ""
 		bestReliabilityRate := 0.0
-		
+
 		for modelName, modelResults := range results {
 			successCount := 0
 			totalTokensPerSecond := 0.0
 			validTokenTests := 0
-			
+
 			for _, result := range modelResults {
 				if result.Success {
 					successCount++
@@ -253,13 +253,13 @@ func printBenchmarkSummary(results map[string][]BenchmarkResult) {
 					}
 				}
 			}
-			
+
 			reliabilityRate := float64(successCount) / float64(len(modelResults))
 			if reliabilityRate > bestReliabilityRate {
 				bestReliability = modelName
 				bestReliabilityRate = reliabilityRate
 			}
-			
+
 			if validTokenTests > 0 {
 				avgTokensPerSecond := totalTokensPerSecond / float64(validTokenTests)
 				if avgTokensPerSecond > bestSpeedValue {
@@ -268,14 +268,14 @@ func printBenchmarkSummary(results map[string][]BenchmarkResult) {
 				}
 			}
 		}
-		
+
 		if bestSpeed != "" {
 			fmt.Printf("Fastest model: %s (%.1f tokens/sec)\n", bestSpeed, bestSpeedValue)
 		}
 		if bestReliability != "" {
 			fmt.Printf("Most reliable: %s (%.1f%% success rate)\n", bestReliability, bestReliabilityRate*100)
 		}
-		
+
 		// Recommend gemma3:4b if it performed well
 		if gemmaResults, exists := results["gemma3:4b"]; exists {
 			successCount := 0
@@ -285,7 +285,7 @@ func printBenchmarkSummary(results map[string][]BenchmarkResult) {
 				}
 			}
 			reliabilityRate := float64(successCount) / float64(len(gemmaResults))
-			
+
 			if reliabilityRate >= 0.8 { // 80% success rate
 				fmt.Printf("\n✅ gemma3:4b shows strong performance (%.1f%% success rate)\n", reliabilityRate*100)
 				fmt.Println("   Recommended for coding, reasoning, and creative tasks.")
@@ -296,7 +296,7 @@ func printBenchmarkSummary(results map[string][]BenchmarkResult) {
 
 func init() {
 	rootCmd.AddCommand(benchmarkCmd)
-	
+
 	benchmarkCmd.Flags().BoolVarP(&benchmarkAll, "all", "a", false, "Test all available models")
 	benchmarkCmd.Flags().StringVarP(&benchmarkModel, "model", "m", "", "Test specific model")
 	benchmarkCmd.Flags().BoolVarP(&benchmarkQuick, "quick", "q", false, "Run quick benchmark (fewer tests)")

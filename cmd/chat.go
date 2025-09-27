@@ -21,7 +21,7 @@ var chatCmd = &cobra.Command{
 
 func runChatCommand(cmd *cobra.Command, args []string) {
 	prompt := strings.Join(args, " ")
-	
+
 	selectedModel := model
 	if selectedModel == "" {
 		// Auto-select the first available chat model
