@@ -41,6 +41,16 @@ Kirk-AI is a Go-based command-line interface for interacting with Ollama AI mode
    go run main.go [command] [args]
    ```
 
+**Makefile shortcut:**
+
+The repository now includes a `Makefile` that mirrors the workflow above. Prefer the Make targets when you need a quick rebuild or want consistent formatting:
+
+```bash
+make deps build
+```
+
+Run `make help` to discover additional targets.
+
 ### Validation Commands
 
 **Always run in this order:**
@@ -48,22 +58,26 @@ Kirk-AI is a Go-based command-line interface for interacting with Ollama AI mode
 1. **Format code** (required before committing):
    ```bash
    go fmt ./...
+   # or: make fmt
    ```
 
 2. **Vet code** (required for CI):
    ```bash
    go vet ./...
+   # or: make vet
    ```
 
 3. **Run tests** (no test files currently exist):
    ```bash
    go test -v ./...
+   # or: make test
    # Output: [no test files] for all packages
    ```
 
 4. **Clean build artifacts**:
    ```bash
    go clean
+   # or: make clean
    ```
 
 ### Functional Testing
@@ -74,11 +88,18 @@ Kirk-AI is a Go-based command-line interface for interacting with Ollama AI mode
 # Test CLI structure (always works)
 ./kirk-ai --help
 
+# Quick checks via Make targets
+make run
+make build
+make models
+make check-ollama
 # Test commands (require Ollama)
 ./kirk-ai models
 ./kirk-ai chat "hello" --verbose
 ./kirk-ai code "write a hello world function"
 ```
+
+`make models` (and other binary-driven targets like `make benchmark`) expect the compiled binary in `build/kirk-ai`, so run `make build` beforehand.
 
 **Expected errors without Ollama:**
 - `dial tcp [::1]:11434: connect: connection refused`
@@ -171,7 +192,9 @@ kirk-ai/
 2. **Build Verification**:
    ```bash
    go build -v .  # Must complete successfully
+   # or: make build
    ./kirk-ai --help  # Must show help without errors
+   # or: make run
    ```
 
 3. **Binary Testing**:
@@ -180,6 +203,7 @@ kirk-ai/
    ./kirk-ai models --help
    ./kirk-ai chat --help
    ./kirk-ai code --help
+   # or: make build && make models
    ```
 
 ### Adding Tests
@@ -236,10 +260,10 @@ Always add to `.gitignore`:
 ### Development Workflow
 
 1. Make code changes
-2. Run `go fmt ./...`
-3. Run `go vet ./...`
-4. Run `go build -v .`
-5. Test with `./kirk-ai --help`
+2. Run `go fmt ./...` (or `make fmt`)
+3. Run `go vet ./...` (or `make vet`)
+4. Run `go build -v .` (or `make deps build`)
+5. Test with `./kirk-ai --help` (or `make run`)
 6. For functional testing, ensure Ollama running with models
 
 ## Agent Guidelines
@@ -250,7 +274,7 @@ Always add to `.gitignore`:
 - Build/validation steps fail unexpectedly
 
 **Key time savers:**
-- Build process is straightforward: `go mod tidy && go build .`
+- Build process is straightforward: `go mod tidy && go build .` or `make deps build`
 - No complex build scripts or configuration required
 - Connection errors to Ollama are normal in development
 - Focus on Go code quality (fmt, vet) rather than functional testing without Ollama
