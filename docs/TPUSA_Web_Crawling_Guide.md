@@ -55,617 +55,452 @@ while read url; do
 done
 ```
 
-## 2. Python-Based Crawling Solutions
+## 2. Go-Based Crawling Solutions
 
-### Using Scrapy Framework
+### Using Colly (recommended for simple, fast crawls)
 
-```python
-# scrapy_tpusa_crawler.py
-import scrapy
-from urllib.parse import urljoin, urlparse
-import json
-import time
+```go
+// colly_crawler.go
+package main
 
-class TPUSACrawler(scrapy.Spider):
-    name = 'tpusa_crawler'
-    allowed_domains = ['tpusa.com']
-    start_urls = [
-        'https://tpusa.com/',
-        'https://tpusa.com/about/',
-        'https://tpusa.com/team/',
-        'https://tpusa.com/news/',
-        'https://tpusa.com/events/',
-        'https://tpusa.com/programs/'
-    ]
-    
-    custom_settings = {
-        'DOWNLOAD_DELAY': 2,
-        'RANDOMIZE_DOWNLOAD_DELAY': True,
-        'CONCURRENT_REQUESTS': 1,
-        'ROBOTSTXT_OBEY': True,
-        'USER_AGENT': 'Mozilla/5.0 (compatible; Research Bot)'
-    }
-    
-    def parse(self, response):
-        # Extract main content
-        content_data = {
-            'url': response.url,
-            'title': response.css('title::text').get(),
-            'meta_description': response.css('meta[name="description"]::attr(content)').get(),
-            'headings': {
-                'h1': response.css('h1::text').getall(),
-                'h2': response.css('h2::text').getall(),
-                'h3': response.css('h3::text').getall()
-            },
-            'paragraphs': response.css('p::text').getall(),
-            'links': response.css('a::attr(href)').getall(),
-            'timestamp': time.strftime('%Y-%m-%d %H:%M:%S')
-        }
-        
-        # Clean and structure content
-        content_data['clean_text'] = self.extract_clean_text(response)
-        
-        yield content_data
-        
-        # Follow links to other pages on the same domain
-        for link in response.css('a::attr(href)').getall():
-            if link:
-                absolute_url = urljoin(response.url, link)
-                if self.is_valid_url(absolute_url):
-                    yield response.follow(link, self.parse)
-    
-    def extract_clean_text(self, response):
-        # Remove script and style elements
-        text_content = response.css('body *:not(script):not(style)::text').getall()
-        clean_text = ' '.join([text.strip() for text in text_content if text.strip()])
-        return clean_text
-    
-    def is_valid_url(self, url):
-        parsed = urlparse(url)
-        # Skip certain file types and external domains
-        skip_extensions = ['.pdf', '.jpg', '.png', '.gif', '.css', '.js', '.zip']
-        return (parsed.netloc in self.allowed_domains and 
-                not any(url.endswith(ext) for ext in skip_extensions))
+import (
+	"encoding/json"
+	"log"
+	"strings"
 
-# Run with: scrapy crawl tpusa_crawler -o tpusa_data.json
+	"github.com/gocolly/colly/v2"
+	"github.com/PuerkitoBio/goquery"
+)
+
+func main() {
+	c := colly.NewCollector(
+		colly.AllowedDomains("tpusa.com"),
+		colly.MaxDepth(3),
+	)
+
+	var results []map[string]interface{}
+
+	c.OnHTML("html", func(e *colly.HTMLElement) {
+		doc := make(map[string]interface{})
+		sel := e.DOM
+
+		// Title
+		doc["url"] = e.Request.URL.String()
+		doc["title"] = strings.TrimSpace(sel.Find("title").Text())
+
+		// Meta description
+		doc["meta_description"] = strings.TrimSpace(sel.Find("meta[name=description]").AttrOr("content", ""))
+
+		// Headings
+		headings := map[string][]string{}
+		for i := 1; i <= 3; i++ {
+			h := make([]string, 0)
+			sel.Find("h" + string('0'+i)).Each(func(_ int, s *goquery.Selection) {
+				text := strings.TrimSpace(s.Text())
+				if text != "" {
+					h = append(h, text)
+				}
+			})
+			headings["h"+string('0'+i)] = h
+		}
+		doc["headings"] = headings
+
+		// Paragraphs
+		paras := make([]string, 0)
+		sel.Find("p").Each(func(_ int, s *goquery.Selection) {
+			text := strings.TrimSpace(s.Text())
+			if text != "" {
+				paras = append(paras, text)
+			}
+		})
+		doc["paragraphs"] = paras
+
+		// Links
+		links := make([]string, 0)
+		sel.Find("a[href]").Each(func(_ int, s *goquery.Selection) {
+			href, _ := s.Attr("href")
+			links = append(links, href)
+		})
+		doc["links"] = links
+
+		results = append(results, doc)
+	})
+
+	// Follow internal links
+	c.OnHTML("a[href]", func(e *colly.HTMLElement) {
+		href := e.Attr("href")
+		// Let Colly resolve and follow internal links
+		e.Request.Visit(href)
+	})
+
+	c.OnRequest(func(r *colly.Request) {
+		log.Println("Visiting", r.URL.String())
+	})
+
+	if err := c.Visit("https://tpusa.com/"); err != nil {
+		log.Fatal(err)
+	}
+
+	// Save results as JSON
+	out, _ := json.MarshalIndent(results, "", "  ")
+	log.Printf("Collected %d pages\n", len(results))
+	_ = out // write to file as needed
+}
 ```
 
-### Using Requests + BeautifulSoup
+### Using net/http + goquery (explicit queue & more control)
 
-```python
-# requests_crawler.py
-import requests
-from bs4 import BeautifulSoup
-import json
-import time
-from urllib.parse import urljoin, urlparse
-from collections import deque
-import re
+```go
+// requests_crawler.go
+package main
 
-class TPUSARequestsCrawler:
-    def __init__(self):
-        self.session = requests.Session()
-        self.session.headers.update({
-            'User-Agent': 'Mozilla/5.0 (compatible; Research Bot)'
-        })
-        self.visited_urls = set()
-        self.data = []
-        
-    def crawl(self, start_urls, max_pages=200, delay=2):
-        url_queue = deque(start_urls)
-        
-        while url_queue and len(self.visited_urls) < max_pages:
-            url = url_queue.popleft()
-            
-            if url in self.visited_urls:
-                continue
-                
-            try:
-                print(f"Crawling: {url}")
-                response = self.session.get(url, timeout=10)
-                response.raise_for_status()
-                
-                self.visited_urls.add(url)
-                
-                # Parse content
-                soup = BeautifulSoup(response.content, 'html.parser')
-                page_data = self.extract_page_data(soup, url)
-                self.data.append(page_data)
-                
-                # Find new URLs to crawl
-                new_urls = self.find_links(soup, url)
-                url_queue.extend(new_urls)
-                
-                time.sleep(delay)
-                
-            except Exception as e:
-                print(f"Error crawling {url}: {e}")
-                continue
-    
-    def extract_page_data(self, soup, url):
-        # Remove unwanted elements
-        for element in soup(['script', 'style', 'nav', 'header', 'footer']):
-            element.decompose()
-        
-        return {
-            'url': url,
-            'title': soup.find('title').get_text() if soup.find('title') else '',
-            'meta_description': self.get_meta_description(soup),
-            'headings': self.extract_headings(soup),
-            'content': self.extract_content(soup),
-            'breadcrumbs': self.extract_breadcrumbs(soup),
-            'publication_date': self.extract_date(soup),
-            'author': self.extract_author(soup)
-        }
-    
-    def get_meta_description(self, soup):
-        meta = soup.find('meta', attrs={'name': 'description'})
-        return meta.get('content', '') if meta else ''
-    
-    def extract_headings(self, soup):
-        headings = {}
-        for level in range(1, 7):
-            headings[f'h{level}'] = [h.get_text().strip() 
-                                   for h in soup.find_all(f'h{level}')]
-        return headings
-    
-    def extract_content(self, soup):
-        # Focus on main content areas
-        main_content = soup.find('main') or soup.find('article') or soup.find('body')
-        
-        if main_content:
-            paragraphs = [p.get_text().strip() 
-                         for p in main_content.find_all('p') 
-                         if p.get_text().strip()]
-            return ' '.join(paragraphs)
-        return ''
-    
-    def extract_breadcrumbs(self, soup):
-        breadcrumb_selectors = [
-            '.breadcrumb',
-            '.breadcrumbs', 
-            '[itemtype*="BreadcrumbList"]'
-        ]
-        
-        for selector in breadcrumb_selectors:
-            breadcrumb = soup.select_one(selector)
-            if breadcrumb:
-                return [a.get_text().strip() for a in breadcrumb.find_all('a')]
-        return []
-    
-    def extract_date(self, soup):
-        # Look for various date formats
-        date_selectors = [
-            'time[datetime]',
-            '.published-date',
-            '.post-date',
-            '[itemtype*="Article"] time'
-        ]
-        
-        for selector in date_selectors:
-            date_elem = soup.select_one(selector)
-            if date_elem:
-                return date_elem.get('datetime') or date_elem.get_text().strip()
-        return None
-    
-    def extract_author(self, soup):
-        author_selectors = [
-            '.author',
-            '.byline',
-            '[rel="author"]',
-            '[itemtype*="Person"]'
-        ]
-        
-        for selector in author_selectors:
-            author_elem = soup.select_one(selector)
-            if author_elem:
-                return author_elem.get_text().strip()
-        return None
-    
-    def find_links(self, soup, current_url):
-        links = []
-        base_domain = urlparse(current_url).netloc
-        
-        for link in soup.find_all('a', href=True):
-            href = link['href']
-            absolute_url = urljoin(current_url, href)
-            parsed_url = urlparse(absolute_url)
-            
-            # Only crawl same domain links
-            if (parsed_url.netloc == base_domain and 
-                absolute_url not in self.visited_urls and
-                self.is_crawlable_url(absolute_url)):
-                links.append(absolute_url)
-        
-        return list(set(links))  # Remove duplicates
-    
-    def is_crawlable_url(self, url):
-        skip_patterns = [
-            r'\.pdf$', r'\.jpg$', r'\.png$', r'\.gif$', r'\.css$', r'\.js$',
-            r'/wp-admin/', r'/wp-content/', r'/feed/', r'#', r'mailto:',
-            r'/search/', r'/tag/', r'/category/'
-        ]
-        
-        return not any(re.search(pattern, url, re.I) for pattern in skip_patterns)
-    
-    def save_data(self, filename):
-        with open(filename, 'w', encoding='utf-8') as f:
-            json.dump(self.data, f, indent=2, ensure_ascii=False)
-        print(f"Data saved to {filename}")
+import (
+	"encoding/json"
+	"log"
+	"net/http"
+	"net/url"
+	"regexp"
+	"strings"
 
-# Usage example
-if __name__ == "__main__":
-    crawler = TPUSARequestsCrawler()
-    start_urls = [
-        'https://tpusa.com/',
-        'https://tpusa.com/about/',
-        'https://tpusa.com/team/',
-        'https://tpusa.com/news/',
-        'https://tpusa.com/events/'
-    ]
-    
-    crawler.crawl(start_urls, max_pages=500, delay=2)
-    crawler.save_data('tpusa_crawled_data.json')
+	"github.com/PuerkitoBio/goquery"
+)
+
+func fetchAndParse(u string) (*goquery.Document, error) {
+	resp, err := http.Get(u)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	return goquery.NewDocumentFromReader(resp.Body)
+}
+
+func isCrawlable(u string) bool {
+	skip := regexp.MustCompile(`(?i)\.(pdf|jpg|png|gif|css|js)$|/wp-admin/|/wp-content/|/feed/|#|mailto:`)
+	return !skip.MatchString(u)
+}
+
+func main() {
+	start := []string{"https://tpusa.com/", "https://tpusa.com/about/"}
+	visited := map[string]struct{}{}
+	queue := make([]string, 0)
+	queue = append(queue, start...)
+
+	var data []map[string]interface{}
+
+	for len(queue) > 0 && len(visited) < 500 {
+		u := queue[0]
+		queue = queue[1:]
+		if _, ok := visited[u]; ok { continue }
+
+		doc, err := fetchAndParse(u)
+		if err != nil { log.Println("error fetching", u, err); continue }
+
+		visited[u] = struct{}{}
+
+		page := map[string]interface{}{
+			"url": u,
+			"title": strings.TrimSpace(doc.Find("title").Text()),
+		}
+		// Extract main content paragraph text
+		main := doc.Find("main").First()
+		if main.Length() == 0 { main = doc.Find("body") }
+		paras := []string{}
+		main.Find("p").Each(func(i int, s *goquery.Selection) {
+			if t := strings.TrimSpace(s.Text()); t != "" { paras = append(paras, t) }
+		})
+		page["content"] = strings.Join(paras, " ")
+		data = append(data, page)
+
+		// Enqueue links
+		doc.Find("a[href]").Each(func(i int, s *goquery.Selection) {
+			href, _ := s.Attr("href")
+			abs := href
+			if parsed, err := url.Parse(href); err == nil && !parsed.IsAbs() {
+				base, _ := url.Parse(u)
+				abs = base.ResolveReference(parsed).String()
+			}
+			if isCrawlable(abs) {
+				if _, seen := visited[abs]; !seen {
+					queue = append(queue, abs)
+				}
+			}
+		})
+	}
+
+	b, _ := json.MarshalIndent(data, "", "  ")
+	log.Printf("Saved %d pages\n", len(data))
+	_ = b // write to file if desired
+}
 ```
 
-## 3. Advanced Crawling Techniques
+### JavaScript-Rendered Content (chromedp)
 
-### JavaScript-Rendered Content (Selenium)
+```go
+// chromedp_crawler.go
+package main
 
-```python
-# selenium_crawler.py
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-import json
-import time
+import (
+	"context"
+	"fmt"
+	"log"
+	"time"
 
-class TPUSASeleniumCrawler:
-    def __init__(self):
-        self.setup_driver()
-        self.data = []
-    
-    def setup_driver(self):
-        chrome_options = Options()
-        chrome_options.add_argument('--headless')
-        chrome_options.add_argument('--no-sandbox')
-        chrome_options.add_argument('--disable-dev-shm-usage')
-        chrome_options.add_argument('--user-agent=Mozilla/5.0 (compatible; Research Bot)')
-        
-        self.driver = webdriver.Chrome(options=chrome_options)
-        self.driver.set_page_load_timeout(30)
-    
-    def crawl_dynamic_content(self, urls):
-        for url in urls:
-            try:
-                print(f"Loading: {url}")
-                self.driver.get(url)
-                
-                # Wait for dynamic content to load
-                WebDriverWait(self.driver, 10).until(
-                    EC.presence_of_element_located((By.TAG_NAME, "body"))
-                )
-                
-                # Scroll to load lazy content
-                self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-                time.sleep(3)
-                
-                # Extract data
-                page_data = {
-                    'url': url,
-                    'title': self.driver.title,
-                    'content': self.driver.find_element(By.TAG_NAME, "body").text,
-                    'links': [elem.get_attribute('href') 
-                             for elem in self.driver.find_elements(By.TAG_NAME, "a") 
-                             if elem.get_attribute('href')]
-                }
-                
-                self.data.append(page_data)
-                time.sleep(2)
-                
-            except Exception as e:
-                print(f"Error with {url}: {e}")
-                continue
-    
-    def close(self):
-        self.driver.quit()
+	"github.com/chromedp/chromedp"
+)
+
+func main() {
+	ctx, cancel := chromedp.NewContext(context.Background())
+	defer cancel()
+
+	ctx, cancel = context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+
+	var body string
+	url := "https://tpusa.com/"
+	if err := chromedp.Run(ctx,
+		chromedp.Navigate(url),
+		chromedp.WaitReady("body", chromedp.ByQuery),
+		chromedp.OuterHTML("html", &body, chromedp.ByQuery),
+	); err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println("Page length:", len(body))
+	// Parse `body` with goquery if you need structured extraction
+}
 ```
 
-### API-Based Data Collection
+### API-Based Data Collection (HTTP checks + RSS with gofeed)
 
-```python
-# api_data_collector.py
-import requests
-import json
+```go
+// api_data_collector.go
+package main
 
-class TPUSAAPICollector:
-    def __init__(self):
-        self.session = requests.Session()
-        self.session.headers.update({
-            'User-Agent': 'Mozilla/5.0 (compatible; Research Bot)'
-        })
-    
-    def check_for_apis(self):
-        # Common WordPress/CMS API endpoints
-        api_endpoints = [
-            'https://tpusa.com/wp-json/wp/v2/posts',
-            'https://tpusa.com/wp-json/wp/v2/pages',
-            'https://tpusa.com/api/posts',
-            'https://tpusa.com/feed/',
-            'https://tpusa.com/sitemap.xml',
-            'https://tpusa.com/robots.txt'
-        ]
-        
-        available_endpoints = []
-        for endpoint in api_endpoints:
-            try:
-                response = self.session.get(endpoint, timeout=10)
-                if response.status_code == 200:
-                    available_endpoints.append({
-                        'url': endpoint,
-                        'content_type': response.headers.get('content-type', ''),
-                        'size': len(response.content)
-                    })
-                    print(f"✓ Available: {endpoint}")
-                else:
-                    print(f"✗ Not available: {endpoint}")
-            except:
-                print(f"✗ Error accessing: {endpoint}")
-        
-        return available_endpoints
-    
-    def collect_rss_data(self, rss_url):
-        import feedparser
-        
-        feed = feedparser.parse(rss_url)
-        posts = []
-        
-        for entry in feed.entries:
-            post_data = {
-                'title': getattr(entry, 'title', ''),
-                'link': getattr(entry, 'link', ''),
-                'summary': getattr(entry, 'summary', ''),
-                'published': getattr(entry, 'published', ''),
-                'author': getattr(entry, 'author', ''),
-                'tags': [tag.term for tag in getattr(entry, 'tags', [])]
-            }
-            posts.append(post_data)
-        
-        return posts
+import (
+	"encoding/json"
+	"fmt"
+	"log"
+	"net/http"
+
+	"github.com/mmcdole/gofeed"
+)
+
+func main() {
+	endpoints := []string{
+		"https://tpusa.com/wp-json/wp/v2/posts",
+		"https://tpusa.com/wp-json/wp/v2/pages",
+		"https://tpusa.com/feed/",
+		"https://tpusa.com/sitemap.xml",
+		"https://tpusa.com/robots.txt",
+	}
+
+	client := &http.Client{}
+	available := []map[string]interface{}{}
+	for _, ep := range endpoints {
+		resp, err := client.Head(ep)
+		if err != nil {
+			fmt.Println("✗ Error accessing:", ep)
+			continue
+		}
+		if resp.StatusCode == http.StatusOK {
+			available = append(available, map[string]interface{}{
+				"url": ep,
+				"content_type": resp.Header.Get("Content-Type"),
+				"size": resp.ContentLength,
+			})
+			fmt.Println("✓ Available:", ep)
+		} else {
+			fmt.Println("✗ Not available:", ep)
+		}
+	}
+
+	// Parse RSS feed with gofeed
+	fp := gofeed.NewParser()
+	feed, err := fp.ParseURL("https://tpusa.com/feed/")
+	if err == nil && feed != nil {
+		b, _ := json.MarshalIndent(feed.Items, "", "  ")
+		_ = b // save feed items as needed
+	}
+
+	_ = available
+}
 ```
 
-## 4. Content Processing and Cleaning
+## 4. Content Processing and Cleaning (Go)
 
-### Text Extraction and Cleaning
+```go
+// content_processor.go
+package main
 
-```python
-# content_processor.py
-import re
-from bs4 import BeautifulSoup
-import html
+import (
+	"regexp"
+	"strings"
+	"encoding/json"
+	"fmt"
 
-class ContentProcessor:
-    def __init__(self):
-        self.unwanted_patterns = [
-            r'Share this:.*',
-            r'Like this:.*',
-            r'Related posts:.*',
-            r'Tags:.*',
-            r'Categories:.*',
-            r'Copyright.*',
-            r'All rights reserved.*'
-        ]
-    
-    def clean_html_content(self, html_content):
-        soup = BeautifulSoup(html_content, 'html.parser')
-        
-        # Remove unwanted elements
-        for element in soup(['script', 'style', 'nav', 'header', 'footer', 
-                           'aside', 'form', 'iframe', 'noscript']):
-            element.decompose()
-        
-        # Remove elements with specific classes (common WordPress widgets)
-        unwanted_classes = ['sidebar', 'widget', 'advertisement', 'social-share']
-        for class_name in unwanted_classes:
-            for element in soup.find_all(class_=class_name):
-                element.decompose()
-        
-        # Extract clean text
-        text = soup.get_text()
-        return self.clean_text(text)
-    
-    def clean_text(self, text):
-        # Decode HTML entities
-        text = html.unescape(text)
-        
-        # Remove unwanted patterns
-        for pattern in self.unwanted_patterns:
-            text = re.sub(pattern, '', text, flags=re.IGNORECASE)
-        
-        # Normalize whitespace
-        text = re.sub(r'\s+', ' ', text)
-        text = text.strip()
-        
-        return text
-    
-    def extract_structured_data(self, soup):
-        structured_data = {}
-        
-        # Extract JSON-LD structured data
-        json_ld_scripts = soup.find_all('script', type='application/ld+json')
-        for script in json_ld_scripts:
-            try:
-                data = json.loads(script.string)
-                structured_data['json_ld'] = data
-            except:
-                continue
-        
-        # Extract Open Graph data
-        og_data = {}
-        og_tags = soup.find_all('meta', property=lambda x: x and x.startswith('og:'))
-        for tag in og_tags:
-            property_name = tag.get('property', '').replace('og:', '')
-            content = tag.get('content', '')
-            og_data[property_name] = content
-        
-        if og_data:
-            structured_data['open_graph'] = og_data
-        
-        return structured_data
+	"github.com/PuerkitoBio/goquery"
+}
+
+var unwantedPatterns = []string{
+	`Share this:.*`, `Like this:.*`, `Related posts:.*`, `Tags:.*`,
+	`Categories:.*`, `Copyright.*`, `All rights reserved.*`,
+}
+
+func cleanHTMLContent(htmlStr string) string {
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader(htmlStr))
+	if err != nil { return "" }
+
+	// Remove unwanted nodes
+	doc.Find("script, style, nav, header, footer, aside, form, iframe, noscript").Each(func(i int, s *goquery.Selection){
+		s.Remove()
+	})
+
+	unwantedClasses := []string{"sidebar", "widget", "advertisement", "social-share"}
+	for _, cls := range unwantedClasses {
+		doc.Find("."+cls).Each(func(i int, s *goquery.Selection){ s.Remove() })
+	}
+
+	text := strings.TrimSpace(doc.Text())
+	return cleanText(text)
+}
+
+func cleanText(text string) string {
+	// Remove unwanted patterns
+	for _, p := range unwantedPatterns {
+		r := regexp.MustCompile(`(?i)` + p)
+		text = r.ReplaceAllString(text, "")
+	}
+	// Normalize whitespace
+	rws := regexp.MustCompile(`\s+`)
+	text = rws.ReplaceAllString(text, " ")
+	return strings.TrimSpace(text)
+}
+
+func extractStructuredData(htmlStr string) map[string]interface{} {
+	res := map[string]interface{}{}
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader(htmlStr))
+	if err != nil { return res }
+
+	// Extract JSON-LD
+	jsonLD := []interface{}{}
+	doc.Find("script[type='application/ld+json']").Each(func(i int, s *goquery.Selection){
+		if t := strings.TrimSpace(s.Text()); t != "" {
+			var v interface{}
+			if err := json.Unmarshal([]byte(t), &v); err == nil { jsonLD = append(jsonLD, v) }
+		}
+	})
+	if len(jsonLD) > 0 { res["json_ld"] = jsonLD }
+
+	// Open Graph
+	og := map[string]string{}
+	doc.Find("meta").Each(func(i int, s *goquery.Selection){
+		if p, _ := s.Attr("property"); strings.HasPrefix(p, "og:") {
+			og[strings.TrimPrefix(p, "og:")] = s.AttrOr("content", "")
+		}
+	})
+	if len(og) > 0 { res["open_graph"] = og }
+	return res
+}
+
+func main() {
+	fmt.Println("content processor helpers defined")
+}
 ```
 
 ## 5. Crawling Strategy and Implementation
 
-### Complete Crawling Pipeline
+### Complete Crawling Pipeline (bash wrapper updated for Go tools)
 
 ```bash
 #!/bin/bash
-# crawl_tpusa.sh
+# crawl_tpusa.sh (Go-based primitives)
 
 # Create directory structure
 mkdir -p tpusa_crawl/{raw_html,processed_data,logs}
 
 # Step 1: Discover URLs via sitemap
-echo "Discovering URLs..."
-curl -s https://tpusa.com/sitemap.xml | \
-grep -oP '(?<=<loc>)[^<]+' > tpusa_crawl/discovered_urls.txt
+curl -s https://tpusa.com/sitemap.xml | grep -oP '(?<=<loc>)[^<]+' > tpusa_crawl/discovered_urls.txt
 
-# Step 2: Run Python crawler
-echo "Starting comprehensive crawl..."
-python3 requests_crawler.py
+# Step 2: Run Go crawler (example using Colly)
+# go run colly_crawler.go
 
 # Step 3: Process and clean data
-echo "Processing crawled data..."
-python3 content_processor.py
+# go run content_processor.go
 
 # Step 4: Generate embeddings-ready data
-echo "Preparing data for embeddings..."
-python3 prepare_embeddings_data.py
+# go run prepare_embeddings_data.go
 
 echo "Crawl complete. Data ready in tpusa_crawl/ directory"
 ```
 
-### Embeddings Data Preparation
+### Embeddings Data Preparation (Go)
 
-```python
-# prepare_embeddings_data.py
-import json
-import re
-from datetime import datetime
+```go
+// prepare_embeddings_data.go
+package main
 
-class EmbeddingsDataPreparation:
-    def __init__(self, crawled_data_file):
-        with open(crawled_data_file, 'r', encoding='utf-8') as f:
-            self.raw_data = json.load(f)
-        
-        self.processed_chunks = []
-    
-    def chunk_content(self, text, max_tokens=500):
-        # Simple sentence-based chunking
-        sentences = re.split(r'[.!?]+', text)
-        chunks = []
-        current_chunk = ""
-        
-        for sentence in sentences:
-            sentence = sentence.strip()
-            if not sentence:
-                continue
-                
-            # Rough token estimation (words * 1.3)
-            estimated_tokens = len((current_chunk + " " + sentence).split()) * 1.3
-            
-            if estimated_tokens > max_tokens and current_chunk:
-                chunks.append(current_chunk.strip())
-                current_chunk = sentence
-            else:
-                current_chunk += " " + sentence
-        
-        if current_chunk.strip():
-            chunks.append(current_chunk.strip())
-        
-        return chunks
-    
-    def process_for_embeddings(self):
-        for page in self.raw_data:
-            if not page.get('content'):
-                continue
-            
-            # Chunk the content
-            content_chunks = self.chunk_content(page['content'])
-            
-            for i, chunk in enumerate(content_chunks):
-                embedding_doc = {
-                    'id': f"{page['url']}#chunk_{i}",
-                    'source_url': page['url'],
-                    'title': page.get('title', ''),
-                    'content': chunk,
-                    'chunk_index': i,
-                    'total_chunks': len(content_chunks),
-                    'metadata': {
-                        'page_title': page.get('title', ''),
-                        'meta_description': page.get('meta_description', ''),
-                        'headings': page.get('headings', {}),
-                        'publication_date': page.get('publication_date'),
-                        'author': page.get('author'),
-                        'breadcrumbs': page.get('breadcrumbs', []),
-                        'crawled_at': datetime.now().isoformat()
-                    }
-                }
-                
-                # Add content categories
-                embedding_doc['metadata']['content_category'] = self.categorize_content(page)
-                embedding_doc['metadata']['keywords'] = self.extract_keywords(chunk)
-                
-                self.processed_chunks.append(embedding_doc)
-    
-    def categorize_content(self, page):
-        url = page['url'].lower()
-        title = page.get('title', '').lower()
-        
-        if 'about' in url or 'mission' in url:
-            return 'organizational_info'
-        elif 'team' in url or 'staff' in url or 'leadership' in url:
-            return 'leadership_bio'
-        elif 'news' in url or 'press' in url:
-            return 'news_article'
-        elif 'event' in url or 'tour' in url:
-            return 'event_info'
-        elif 'program' in url or 'initiative' in url:
-            return 'program_info'
-        else:
-            return 'general_content'
-    
-    def extract_keywords(self, text):
-        # Simple keyword extraction
-        common_tpusa_terms = [
-            'turning point', 'tpusa', 'charlie kirk', 'conservative', 'student',
-            'campus', 'activism', 'freedom', 'liberty', 'free market',
-            'limited government', 'fiscal responsibility', 'american exceptionalism'
-        ]
-        
-        found_keywords = []
-        text_lower = text.lower()
-        
-        for term in common_tpusa_terms:
-            if term in text_lower:
-                found_keywords.append(term)
-        
-        return found_keywords
-    
-    def save_embeddings_data(self, output_file):
-        with open(output_file, 'w', encoding='utf-8') as f:
-            json.dump(self.processed_chunks, f, indent=2, ensure_ascii=False)
-        
-        print(f"Processed {len(self.processed_chunks)} chunks for embeddings")
-        print(f"Data saved to {output_file}")
+import (
+	"encoding/json"
+	"io/ioutil"
+	"log"
+	"regexp"
+	"strings"
+	"time"
+)
 
-# Usage
-if __name__ == "__main__":
-    processor = EmbeddingsDataPreparation('tpusa_crawled_data.json')
-    processor.process_for_embeddings()
-    processor.save_embeddings_data('tpusa_embeddings_ready.json')
+func chunkContent(text string, maxTokens int) []string {
+	sentences := regexp.MustCompile(`[.!?]+\s*`).Split(text, -1)
+	chunks := []string{}
+	current := ""
+	for _, s := range sentences {
+		s = strings.TrimSpace(s)
+		if s == "" { continue }
+		est := int(float64(len(strings.Fields(current+" "+s))) * 1.3)
+		if est > maxTokens && current != "" {
+			chunks = append(chunks, strings.TrimSpace(current))
+			current = s
+		} else {
+			if current == "" { current = s } else { current += " "+s }
+		}
+	}
+	if strings.TrimSpace(current) != "" { chunks = append(chunks, strings.TrimSpace(current)) }
+	return chunks
+}
+
+func processForEmbeddings(inputFile, outputFile string) {
+	b, err := ioutil.ReadFile(inputFile)
+	if err != nil { log.Fatal(err) }
+	var pages []map[string]interface{}
+	if err := json.Unmarshal(b, &pages); err != nil { log.Fatal(err) }
+
+	out := []map[string]interface{}{}
+	for _, page := range pages {
+		content, _ := page["content"].(string)
+		if content == "" { continue }
+		chunks := chunkContent(content, 500)
+		for i, c := range chunks {
+			doc := map[string]interface{}{
+				"id": page["url"].(string) + "#chunk_" + string(i),
+				"source_url": page["url"],
+				"title": page["title"],
+				"content": c,
+				"chunk_index": i,
+				"total_chunks": len(chunks),
+				"metadata": map[string]interface{}{
+					"crawled_at": time.Now().Format(time.RFC3339),
+				},
+			}
+			out = append(out, doc)
+		}
+	}
+	ob, _ := json.MarshalIndent(out, "", "  ")
+	ioutil.WriteFile(outputFile, ob, 0644)
+	log.Printf("Processed %d chunks for embeddings", len(out))
+}
+
+func main() {
+	processForEmbeddings("tpusa_crawled_data.json", "tpusa_embeddings_ready.json")
+}
 ```
 
 ## 6. Best Practices and Considerations
@@ -690,25 +525,23 @@ if __name__ == "__main__":
 - Monitor and log crawling activities
 - Implement duplicate detection and filtering
 
-## 7. Installation and Setup Commands
+## 7. Installation and Setup Commands (Go)
 
 ```bash
-# Install required Python packages
-pip install scrapy requests beautifulsoup4 selenium lxml feedparser
+# Install required Go packages
+# Modules used in examples: colly, goquery, chromedp, gofeed
+go get github.com/gocolly/colly/v2
+go get github.com/PuerkitoBio/goquery
+go get github.com/chromedp/chromedp
+go get github.com/mmcdole/gofeed
 
-# Install Scrapy (if not already installed)
-pip install scrapy
+# Build/run examples
+go run colly_crawler.go
+go run requests_crawler.go
+go run chromedp_crawler.go
 
-# Install Chrome WebDriver for Selenium
-# macOS with Homebrew:
-brew install chromedriver
-
-# Or download manually from: https://chromedriver.chromium.org/
-
-# Create project structure
-mkdir tpusa_crawler
-cd tpusa_crawler
-scrapy startproject tpusa_spider
+# Optional: Install Chrome (for chromedp) on macOS
+brew install --cask google-chrome
 ```
 
 This comprehensive guide provides multiple approaches to crawling TPUSA's website, from simple command-line tools to sophisticated frameworks. Choose the approach that best fits your technical requirements and the scale of data you need to collect.
