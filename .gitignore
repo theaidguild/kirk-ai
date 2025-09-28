@@ -75,3 +75,4 @@ tmp/
 # Local development tools
 .tool-versions
 tpusa_crawl
+final_embeddings.json
