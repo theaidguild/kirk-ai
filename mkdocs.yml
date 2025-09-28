@@ -50,3 +50,19 @@ extra:
 
 extra_css:
   - assets/stylesheets/overrides.css
+
+nav:
+  - Get Started:
+      - Welcome: index.md
+      - TPUSA AI: tpusa_ai.md
+      - Installation: installation.md
+      - Quickstart: usage.md
+  - Servers:
+      - Overview: architecture.md
+      - Core Components: commands.md
+      - Advanced Features:
+          - Contributing: contributing.md
+  - Clients:
+      - Overview: commands.md
+  - Integrations:
+      - Overview: installation.md
