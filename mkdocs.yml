@@ -12,12 +12,20 @@ site_dir: site
 
 theme:
   name: material
-  logo: assets/images/logo.svg
-  favicon: assets/images/logo.svg
+  # logo and favicon removed per request
   palette:
     - scheme: slate
       primary: teal
       accent: cyan
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+    - scheme: default
+      primary: teal
+      accent: cyan
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
   features:
     - navigation.instant
     - navigation.indexes
@@ -42,21 +50,3 @@ extra:
 
 extra_css:
   - assets/stylesheets/overrides.css
-
-extra_javascript:
-  - assets/javascripts/copy-page.js
-
-nav:
-  - Get Started:
-      - Welcome: index.md
-      - Installation: installation.md
-      - Quickstart: usage.md
-  - Servers:
-      - Overview: architecture.md
-      - Core Components: commands.md
-      - Advanced Features: 
-          - Contributing: contributing.md
-  - Clients:
-      - Overview: commands.md
-  - Integrations:
-      - Overview: installation.md
