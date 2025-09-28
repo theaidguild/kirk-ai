@@ -11,12 +11,35 @@ theme:
   palette:
     - scheme: default
       primary: teal
-      accent: indigo
+      accent: cyan
+    - scheme: slate
+      primary: teal
+      accent: cyan
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
   features:
     - navigation.instant
     - navigation.indexes
     - search.highlight
     - navigation.tabs
+    - header.autohide
+    - content.code.copy
+  language: en
+  font:
+    text: Roboto
+    code: Roboto Mono
+
+plugins:
+  - search
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/theaidguild/kirk-ai
+
+extra_css:
+  - assets/stylesheets/overrides.css
 
 nav:
   - Home: index.md

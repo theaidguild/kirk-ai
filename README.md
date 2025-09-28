@@ -197,14 +197,18 @@ pip install mkdocs
 mkdocs serve -f mkdocs.yml
 ```
 
-### Documentation theme
+#### Dark theme & UX
 
-The project documentation uses the Material for MkDocs theme. To preview the docs locally with the same theme used in GitHub Pages, install the docs requirements and run the MkDocs server:
+The documentation site uses the Material for MkDocs theme with a dark-mode toggle. When viewing the site, use the theme toggle (top-right) to switch between light and dark modes. The site will also follow the visitor's system preference.
+
+To preview with the same theme locally, install the docs requirements and run the local server:
 
 ```bash
 pip install -r docs_requirements.txt
 mkdocs serve -f mkdocs.yml
 ```
+
+You can tweak the visual look by editing `docs_src/assets/stylesheets/overrides.css`.
 
 If you only want a minimal preview without the theme extras, you can install just MkDocs:
 
