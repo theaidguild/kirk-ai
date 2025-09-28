@@ -30,12 +30,14 @@ class Termynal {
     constructor(container = '#termynal', options = {}) {
         this.container = (typeof container === 'string') ? document.querySelector(container) : container;
         this.pfx = `data-${options.prefix || 'ty'}`;
+        this.originalTypeDelay = options.typeDelay
+            || parseFloat(this.container.getAttribute(`${this.pfx}-typeDelay`)) || 90;
+        this.originalLineDelay = options.lineDelay
+            || parseFloat(this.container.getAttribute(`${this.pfx}-lineDelay`)) || 1500;
+        this.typeDelay = this.originalTypeDelay;
+        this.lineDelay = this.originalLineDelay;
         this.startDelay = options.startDelay
             || parseFloat(this.container.getAttribute(`${this.pfx}-startDelay`)) || 600;
-        this.typeDelay = options.typeDelay
-            || parseFloat(this.container.getAttribute(`${this.pfx}-typeDelay`)) || 90;
-        this.lineDelay = options.lineDelay
-            || parseFloat(this.container.getAttribute(`${this.pfx}-lineDelay`)) || 1500;
         this.progressLength = options.progressLength
             || parseFloat(this.container.getAttribute(`${this.pfx}-progressLength`)) || 40;
         this.progressChar = options.progressChar
@@ -45,6 +47,13 @@ class Termynal {
         this.cursor = options.cursor
             || this.container.getAttribute(`${this.pfx}-cursor`) || '▋';
         this.lineData = this.lineDataToElements(options.lineData || []);
+        
+        // Animation control state
+        this.isRunning = false;
+        this.isPaused = false;
+        this.currentLineIndex = 0;
+        this.speedMultiplier = 1;
+        
         if (!options.noInit) this.init()
     }
 
@@ -71,14 +80,28 @@ class Termynal {
     }
 
     /**
-     * Start the animation and rener the lines depending on their data attributes.
+     * Start the animation and render the lines depending on their data attributes.
      */
     async start() {
+        if (this.isRunning) return;
+        this.isRunning = true;
+        this.isPaused = false;
+        this.currentLineIndex = 0;
+        
         await this._wait(this.startDelay);
 
-        for (let line of this.lines) {
+        for (let i = 0; i < this.lines.length; i++) {
+            if (!this.isRunning) break;
+            
+            // Wait if paused
+            while (this.isPaused && this.isRunning) {
+                await this._wait(100);
+            }
+            
+            const line = this.lines[i];
+            this.currentLineIndex = i;
             const type = line.getAttribute(this.pfx);
-            const delay = line.getAttribute(`${this.pfx}-delay`) || this.lineDelay;
+            const delay = (line.getAttribute(`${this.pfx}-delay`) || this.lineDelay) / this.speedMultiplier;
 
             if (type == 'input') {
                 line.setAttribute(`${this.pfx}-cursor`, this.cursor);
@@ -98,6 +121,9 @@ class Termynal {
 
             line.removeAttribute(`${this.pfx}-cursor`);
         }
+        
+        this.isRunning = false;
+        this.currentLineIndex = 0;
     }
 
     /**
@@ -106,11 +132,15 @@ class Termynal {
      */
     async type(line) {
         const chars = [...line.textContent];
-        const delay = line.getAttribute(`${this.pfx}-typeDelay`) || this.typeDelay;
+        const delay = (line.getAttribute(`${this.pfx}-typeDelay`) || this.typeDelay) / this.speedMultiplier;
         line.textContent = '';
         this.container.appendChild(line);
 
         for (let char of chars) {
+            if (!this.isRunning) break;
+            while (this.isPaused && this.isRunning) {
+                await this._wait(100);
+            }
             await this._wait(delay);
             line.textContent += char;
         }
@@ -132,13 +162,81 @@ class Termynal {
         this.container.appendChild(line);
 
         for (let i = 1; i < chars.length + 1; i++) {
-            await this._wait(this.typeDelay);
+            if (!this.isRunning) break;
+            while (this.isPaused && this.isRunning) {
+                await this._wait(100);
+            }
+            await this._wait(this.typeDelay / this.speedMultiplier);
             const percent = Math.round(i / chars.length * 100);
             line.textContent = `${chars.slice(0, i)} ${percent}%`;
             if (percent>progressPercent) {
                 break;
             }
         }
+    }
+
+    /**
+     * Reset the terminal to initial state.
+     */
+    reset() {
+        this.isRunning = false;
+        this.isPaused = false;
+        this.currentLineIndex = 0;
+        this.container.innerHTML = '';
+        this.speedMultiplier = 1;
+    }
+
+    /**
+     * Replay the animation from the beginning.
+     */
+    async replay() {
+        this.reset();
+        await this._wait(100); // Brief pause before restart
+        this.start();
+    }
+
+    /**
+     * Pause the current animation.
+     */
+    pause() {
+        this.isPaused = true;
+    }
+
+    /**
+     * Resume the paused animation.
+     */
+    resume() {
+        this.isPaused = false;
+    }
+
+    /**
+     * Toggle pause/resume state.
+     */
+    togglePause() {
+        this.isPaused = !this.isPaused;
+    }
+
+    /**
+     * Set animation speed multiplier.
+     * @param {number} speed - Speed multiplier (1 = normal, 2 = 2x speed, 0.5 = half speed)
+     */
+    setSpeed(speed) {
+        this.speedMultiplier = Math.max(0.1, Math.min(10, speed));
+        this.typeDelay = this.originalTypeDelay / this.speedMultiplier;
+        this.lineDelay = this.originalLineDelay / this.speedMultiplier;
+    }
+
+    /**
+     * Get current animation state.
+     */
+    getState() {
+        return {
+            isRunning: this.isRunning,
+            isPaused: this.isPaused,
+            currentLine: this.currentLineIndex,
+            totalLines: this.lines.length,
+            speed: this.speedMultiplier
+        };
     }
 
     /**

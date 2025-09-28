@@ -45,8 +45,29 @@ The specialized AI is designed for:
 
 ## Interactive Demo
 
-See kirk-ai in action! The terminal below shows a live demonstration of the key features:
+See kirk-ai in action! The terminal below shows a live demonstration of the key features. Use the controls to replay, pause, or adjust the speed:
 
+<!-- Terminal Controls -->
+<div class="termynal-controls">
+    <button id="replayBtn" class="termynal-btn termynal-btn--replay">
+        ♾️ Replay
+    </button>
+    <button id="pauseBtn" class="termynal-btn termynal-btn--pause">
+        ⏸️ Pause
+    </button>
+    <div class="termynal-speed-control">
+        <label for="speedRange">Speed:</label>
+        <input type="range" id="speedRange" min="0.5" max="3" step="0.5" value="1">
+        <span id="speedDisplay" class="termynal-speed-display">1x</span>
+    </div>
+</div>
+
+<!-- Progress Bar -->
+<div class="termynal-progress">
+    <div id="termynalProgressBar" class="termynal-progress-bar"></div>
+</div>
+
+<!-- Terminal -->
 <div id="termynal" data-termynal data-ty-typeDelay="40" data-ty-lineDelay="700">
     <span data-ty="input">./kirk-ai models</span>
     <span data-ty="progress"></span>
@@ -89,7 +110,71 @@ See kirk-ai in action! The terminal below shows a live demonstration of the key 
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        new Termynal('#termynal');
+        // Initialize Termynal instance
+        const termynal = new Termynal('#termynal');
+        
+        // Get control elements
+        const replayBtn = document.getElementById('replayBtn');
+        const pauseBtn = document.getElementById('pauseBtn');
+        const speedRange = document.getElementById('speedRange');
+        const speedDisplay = document.getElementById('speedDisplay');
+        const progressBar = document.getElementById('termynalProgressBar');
+        
+        // Update progress bar
+        function updateProgress() {
+            const state = termynal.getState();
+            const progress = (state.currentLine / state.totalLines) * 100;
+            progressBar.style.width = progress + '%';
+        }
+        
+        // Update button states
+        function updateButtonStates() {
+            const state = termynal.getState();
+            
+            // Update replay button
+            replayBtn.disabled = state.isRunning && !state.isPaused;
+            
+            // Update pause button
+            if (state.isRunning) {
+                if (state.isPaused) {
+                    pauseBtn.textContent = '▶️ Resume';
+                    pauseBtn.className = 'termynal-btn termynal-btn--paused';
+                } else {
+                    pauseBtn.textContent = '⏸️ Pause';
+                    pauseBtn.className = 'termynal-btn termynal-btn--pause';
+                }
+                pauseBtn.disabled = false;
+            } else {
+                pauseBtn.textContent = '⏸️ Pause';
+                pauseBtn.className = 'termynal-btn termynal-btn--pause';
+                pauseBtn.disabled = true;
+            }
+        }
+        
+        // Event listeners
+        replayBtn.addEventListener('click', function() {
+            termynal.replay();
+            progressBar.style.width = '0%';
+        });
+        
+        pauseBtn.addEventListener('click', function() {
+            termynal.togglePause();
+        });
+        
+        speedRange.addEventListener('input', function() {
+            const speed = parseFloat(this.value);
+            termynal.setSpeed(speed);
+            speedDisplay.textContent = speed + 'x';
+        });
+        
+        // Update UI periodically
+        setInterval(function() {
+            updateProgress();
+            updateButtonStates();
+        }, 200);
+        
+        // Initial state
+        updateButtonStates();
     });
 </script>
 

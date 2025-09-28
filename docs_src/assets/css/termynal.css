@@ -140,3 +140,183 @@
     background: #2d3748;
     color: #e2e8f0;
 }
+
+/* Terminal Controls */
+.termynal-controls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+    margin: 1rem 0;
+    padding: 1rem;
+    background: rgba(37, 42, 51, 0.3);
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.termynal-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.6rem 1.2rem;
+    background: #5ed1e3;
+    color: #1a1a1a;
+    border: none;
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    min-width: 100px;
+}
+
+.termynal-btn:hover {
+    background: #4ec5d4;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.termynal-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.termynal-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.termynal-btn:disabled:hover {
+    background: #5ed1e3;
+    transform: none;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Different button variants */
+.termynal-btn--replay {
+    background: #3ec930;
+    color: white;
+}
+
+.termynal-btn--replay:hover {
+    background: #36b82a;
+}
+
+.termynal-btn--pause {
+    background: #f4c025;
+    color: #1a1a1a;
+}
+
+.termynal-btn--pause:hover {
+    background: #e6b422;
+}
+
+.termynal-btn--paused {
+    background: #d9515d;
+    color: white;
+}
+
+.termynal-btn--paused:hover {
+    background: #c7424d;
+}
+
+/* Speed control */
+.termynal-speed-control {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.termynal-speed-control label {
+    color: #a2a2a2;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.termynal-speed-control input[type="range"] {
+    width: 80px;
+    height: 4px;
+    border-radius: 2px;
+    background: rgba(255, 255, 255, 0.2);
+    outline: none;
+    appearance: none;
+}
+
+.termynal-speed-control input[type="range"]::-webkit-slider-thumb {
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #5ed1e3;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.termynal-speed-control input[type="range"]::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #5ed1e3;
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.termynal-speed-display {
+    color: #5ed1e3;
+    font-size: 0.85rem;
+    font-weight: 500;
+    min-width: 32px;
+    text-align: center;
+}
+
+/* Progress indicator */
+.termynal-progress {
+    margin: 0.5rem 0;
+    height: 2px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 1px;
+    overflow: hidden;
+}
+
+.termynal-progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #5ed1e3, #3ec930);
+    border-radius: 1px;
+    transition: width 0.3s ease;
+    width: 0%;
+}
+
+/* Dark/Light mode compatibility for controls */
+[data-md-color-scheme="slate"] .termynal-controls {
+    background: rgba(26, 26, 26, 0.8);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-md-color-scheme="default"] .termynal-controls {
+    background: rgba(45, 55, 72, 0.1);
+    border-color: rgba(0, 0, 0, 0.1);
+}
+
+/* Mobile responsiveness */
+@media (max-width: 600px) {
+    .termynal-controls {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+    
+    .termynal-btn {
+        min-width: 120px;
+        padding: 0.7rem 1rem;
+    }
+    
+    .termynal-speed-control {
+        flex-direction: column;
+        gap: 0.25rem;
+        text-align: center;
+    }
+}
