@@ -624,9 +624,36 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#code" class="md-nav__link">
+  <a href="#search" class="md-nav__link">
     <span class="md-ellipsis">
-      code
+      search
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rag" class="md-nav__link">
+    <span class="md-ellipsis">
+      rag
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#benchmark" class="md-nav__link">
+    <span class="md-ellipsis">
+      benchmark
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tips-troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      Tips &amp; troubleshooting
     </span>
   </a>
   
@@ -858,9 +885,36 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#code" class="md-nav__link">
+  <a href="#search" class="md-nav__link">
     <span class="md-ellipsis">
-      code
+      search
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rag" class="md-nav__link">
+    <span class="md-ellipsis">
+      rag
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#benchmark" class="md-nav__link">
+    <span class="md-ellipsis">
+      benchmark
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tips-troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      Tips &amp; troubleshooting
     </span>
   </a>
   
@@ -1011,9 +1065,36 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#code" class="md-nav__link">
+  <a href="#search" class="md-nav__link">
     <span class="md-ellipsis">
-      code
+      search
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rag" class="md-nav__link">
+    <span class="md-ellipsis">
+      rag
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#benchmark" class="md-nav__link">
+    <span class="md-ellipsis">
+      benchmark
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tips-troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      Tips &amp; troubleshooting
     </span>
   </a>
   
@@ -1040,25 +1121,143 @@
 
 <h1 id="commands">Commands</h1>
 <p>This project uses Cobra for CLI command structure. Below are examples and common flags.</p>
+<p>Global flags (available to all commands):
+- <code>--url</code> — Ollama server URL (default: <code>http://localhost:11434</code>)
+- <code>--model</code> — explicitly choose a model (by default the CLI auto-selects a suitable model)
+- <code>-v, --verbose</code> — enable verbose output (prints metadata and progress)
+- <code>-s, --stream</code> — enable streaming mode where supported (prints partial model output as it arrives)</p>
 <h2 id="chat">chat</h2>
 <p>Use the <code>chat</code> command to send prompts to a selected model.</p>
+<p>Basic usage:</p>
 <pre><code class="language-bash">./kirk-ai chat &quot;Write a short poem about the sea&quot;
 </code></pre>
-<p>Flags:
-- <code>--model</code> — specify model name
-- <code>--verbose</code> — show metadata</p>
+<p>Advanced examples:
+- Stream a response and show metadata:</p>
+<pre><code class="language-bash">./kirk-ai chat &quot;Explain polymorphism in simple terms&quot; --stream --verbose
+</code></pre>
+<ul>
+<li>Force a specific model (useful when you want a known configuration):</li>
+</ul>
+<pre><code class="language-bash">./kirk-ai chat &quot;Generate unit test examples for a Go function&quot; --model gemma3:4b
+</code></pre>
+<ul>
+<li>Feed a long prompt from a file (shell substitution — safe for arbitrary text):</li>
+</ul>
+<pre><code class="language-bash">./kirk-ai chat &quot;$(cat my_long_prompt.txt)&quot; --verbose
+</code></pre>
+<p>Notes:
+- <code>chat</code> requires at least one argument (the prompt). Use shell substitution to include multi-line prompts from files.
+- When <code>--stream</code> is enabled the CLI prints chunks as they arrive and then a final newline; <code>--verbose</code> prints model/latency metadata.</p>
 <h2 id="embed">embed</h2>
-<p>Generate embeddings for text snippets.</p>
+<p>Generate embeddings for text snippets. The <code>embed</code> command supports both single-text embeddings and embedding batches from an embeddings-ready JSON file.</p>
+<p>Single text example (prints embedding vector to stdout):</p>
 <pre><code class="language-bash">./kirk-ai embed &quot;Document text to embed&quot;
 </code></pre>
+<p>Embed chunks from a prepared JSON file (recommended when you have many documents/chunks):
+- Embed the first chunk (default behavior) from a file:</p>
+<pre><code class="language-bash">./kirk-ai embed --file tpusa_crawl/embeddings/tpusa_embeddings_ready.json
+</code></pre>
+<ul>
+<li>Embed all chunks from a file and write full embedding objects to disk:</li>
+</ul>
+<pre><code class="language-bash">./kirk-ai embed --file tpusa_crawl/embeddings/tpusa_embeddings_ready.json --all --out out/embeddings_with_vectors.json
+</code></pre>
+<ul>
+<li>Embed a specific chunk index from a file (0-based index):</li>
+</ul>
+<pre><code class="language-bash">./kirk-ai embed --file tpusa_crawl/embeddings/tpusa_embeddings_ready.json --chunk 42 --out out/chunk_42_embedding.json
+</code></pre>
+<ul>
+<li>Tune performance and API usage:</li>
+</ul>
+<pre><code class="language-bash">./kirk-ai embed --file embeddings.json --all --concurrency 8 --batch-size 20 --rate 10.0 --out embeddings-out.json
+</code></pre>
+<ul>
+<li><code>--concurrency</code> controls how many worker goroutines run in parallel</li>
+<li><code>--batch-size</code> controls how many chunks each worker collects before sending API calls</li>
+<li><code>--rate</code> sets a global requests-per-second limit (set to <code>0</code> to disable rate limiting)</li>
+</ul>
+<p>Scripting tips:
+- To embed many separate short texts from a file line-by-line you can combine shell tools with <code>xargs</code> or a loop:</p>
+<pre><code class="language-bash">cat texts.txt | while IFS= read -r line; do ./kirk-ai embed &quot;${line}&quot;; done
+</code></pre>
+<ul>
+<li>Use <code>--out</code> when embedding from files to get a JSON with <code>id</code>, <code>chunk_index</code>, <code>content</code>, <code>metadata</code>, and <code>embedding</code> fields which is ideal for building a vector store.</li>
+</ul>
 <h2 id="models">models</h2>
 <p>List models available from the Ollama server.</p>
 <pre><code class="language-bash">./kirk-ai models
 </code></pre>
-<h2 id="code">code</h2>
-<p>Generate code snippets or helper functions using the recommended coding model.</p>
-<pre><code class="language-bash">./kirk-ai code &quot;Create a function that reverses a string&quot;
+<p>Notes and examples:
+- The command prints detected capabilities (e.g., embedding, code) and a recommended model for coding and embeddings.
+- If no models are present the CLI will instruct you to <code>ollama pull &lt;model-name&gt;</code>.</p>
+<h2 id="search">search</h2>
+<p>Search through an embeddings file using semantic similarity.</p>
+<p>Basic usage:</p>
+<pre><code class="language-bash">./kirk-ai search &quot;How do I configure CORS?&quot; --embeddings out/embeddings_with_vectors.json
 </code></pre>
+<p>Advanced options:
+- Return more results and lower the similarity threshold:</p>
+<pre><code class="language-bash">./kirk-ai search &quot;privacy policy jurisdiction&quot; --embeddings embeddings.json --top-k 10 --threshold 0.55
+</code></pre>
+<p>Notes:
+- <code>--embeddings</code> is required and should point to a JSON file produced by <code>embed --out</code> (or otherwise containing <code>embedding</code> vectors).
+- <code>--top-k</code> and <code>--threshold</code> allow you to tune recall vs precision for your semantic search.</p>
+<h2 id="rag">rag</h2>
+<p>Retrieval-augmented generation (RAG) — answer questions using embeddings as context.</p>
+<p>Minimal example (requires embeddings file):</p>
+<pre><code class="language-bash">./kirk-ai rag &quot;What is the organization's refund policy?&quot; --embeddings out/embeddings_with_vectors.json
+</code></pre>
+<p>Useful flags and examples:
+- Control how many chunks are combined as context:</p>
+<pre><code class="language-bash">./kirk-ai rag &quot;Summarize the key benefits&quot; --embeddings embeddings.json --context-size 5
+</code></pre>
+<ul>
+<li>Make RAG more strict or permissive in choosing context by similarity threshold:</li>
+</ul>
+<pre><code class="language-bash">./kirk-ai rag &quot;Who is the target audience?&quot; --embeddings embeddings.json --similarity-threshold 0.65
+</code></pre>
+<ul>
+<li>Progressive loading for large contexts (reduces startup latency):</li>
+</ul>
+<pre><code class="language-bash">./kirk-ai rag &quot;Explain the onboarding process&quot; --embeddings embeddings.json --context-size 60 --progressive
+</code></pre>
+<ul>
+<li>Prefer faster (smaller) models when latency matters or override the model explicitly for RAG using <code>--rag-model</code>:</li>
+</ul>
+<pre><code class="language-bash">./kirk-ai rag &quot;Provide a short answer&quot; --embeddings embeddings.json --prefer-fast --rag-model gemma3:4b
+</code></pre>
+<p>Notes:
+- <code>--rag-model</code> explicitly sets the chat model used for the RAG generation step and overrides the CLI's automatic RAG model selection. The global <code>--model</code> flag is a general-purpose flag for some commands, but <code>--rag-model</code> is the recommended way to choose the chat model for <code>rag</code> to ensure the behavior you expect.</p>
+<h2 id="benchmark">benchmark</h2>
+<p>Benchmark model performance across a small set of standardized prompts.</p>
+<p>Basic usage (tests a chosen default or recommended coding model):</p>
+<pre><code class="language-bash">./kirk-ai benchmark
+</code></pre>
+<p>Advanced usage:
+- Test all available models:</p>
+<pre><code class="language-bash">./kirk-ai benchmark --all
+</code></pre>
+<ul>
+<li>Test a specific model (substring matching supported):</li>
+</ul>
+<pre><code class="language-bash">./kirk-ai benchmark --model gemma3:4b
+</code></pre>
+<ul>
+<li>Run a quicker benchmark set:</li>
+</ul>
+<pre><code class="language-bash">./kirk-ai benchmark --quick
+</code></pre>
+<p>Notes:
+- Benchmark prints response times and tokens/sec metrics and summarizes model reliability and speed when multiple models are tested.</p>
+<h2 id="tips-troubleshooting">Tips &amp; troubleshooting</h2>
+<ul>
+<li>If you see "No models found" errors, install a model with Ollama: <code>ollama pull &lt;model-name&gt;</code> and re-run <code>./kirk-ai models</code>.</li>
+<li>Use <code>--verbose</code> to get timing and progress information that helps tune concurrency, batch sizes, and rate limits.</li>
+<li>For automation, prefer embedding a whole dataset (<code>--file</code> + <code>--all</code>) and writing <code>--out</code> once; then run <code>search</code> or <code>rag</code> against that single canonical embeddings file.</li>
+<li>The default Ollama URL is <code>http://localhost:11434</code>. Set <code>--url</code> to target a remote Ollama server if needed.</li>
+</ul>
+<p>For more command-specific details, run the command with <code>--help</code> (e.g., <code>./kirk-ai embed --help</code>).</p>
 
 
 
