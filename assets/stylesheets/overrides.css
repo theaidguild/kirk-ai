@@ -1,103 +1,40 @@
-/* Force dark-only theme and ensure high contrast for readability */
+/* Minimal branding overrides for MkDocs Material */
 
 :root {
-  --kirk-bg: #071020;
-  --kirk-surface: #0b1020;
-  --kirk-muted-surface: #0a1320;
-  --kirk-text: #e6eef6;
-  --kirk-heading: #d1f3ea;
-  --kirk-link: #6ee7b7;
-  --kirk-code-bg: #081225;
-  --kirk-code-text: #e6eef6;
   --kirk-accent: #14b8a6;
 }
 
-/* Apply dark background and readable text globally */
-html, body, .md-content, .md-main, .md-typeset {
-  background-color: var(--kirk-bg) !important;
-  color: var(--kirk-text) !important;
-}
-
-/* Header, nav, and footer surfaces */
-.md-header, .md-header__inner, .md-footer {
-  background-color: var(--kirk-surface) !important;
-  color: var(--kirk-text) !important;
-}
-
-/* Headings */
-.md-typeset h1, .md-typeset h2, .md-typeset h3 {
-  color: var(--kirk-heading) !important;
-}
-
-/* Links */
-.md-typeset a {
-  color: var(--kirk-link) !important;
-}
-
-/* Code blocks and inline code */
-.md-typeset pre, .md-typeset code {
-  background: var(--kirk-code-bg) !important;
-  color: var(--kirk-code-text) !important;
-  border-radius: 8px;
-}
-
-.md-typeset pre {
-  padding: 1rem !important;
-  box-shadow: 0 1px 0 rgba(0,0,0,0.4) !important;
-  border-radius: 10px;
-  background: linear-gradient(180deg, rgba(8,18,37,0.7), rgba(4,8,16,0.65));
-  border: 1px solid rgba(255,255,255,0.03);
-}
-
-/* Tables */
-.md-typeset table th, .md-typeset table td {
-  padding: 0.6rem 0.8rem;
-  border-color: rgba(255,255,255,0.04);
-}
-
-/* Muted surface for sidebars, TOC */
-.md-sidebar, .md-nav, .md-search {
-  background-color: var(--kirk-muted-surface) !important;
-}
-
-/* Ensure focus outlines are visible on dark background */
-a:focus, button:focus, input:focus {
-  outline: 3px solid rgba(110,231,183,0.16) !important;
-  outline-offset: 2px !important;
-}
-
-/* Smaller header on mobile */
-@media (max-width: 768px) {
-  header.md-header {
-    min-height: 44px;
-  }
-}
-
-/* Hide the theme toggle if present (defensive) */
-.md-header__toggle, .md-toggle, .md-footer .md-toggle {
-  display: none !important;
-}
-
-/* Hero banner styling */
-.md-main .hero {
-  display: block;
-  margin: 24px 0 32px 0;
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 6px 24px rgba(4,7,12,0.6);
-}
-
-.md-main .hero img {
-  width: 100%;
-  display: block;
-}
-
-/* Left nav width and styling */
+/* Slightly wider sidebar and constrained content width */
 .md-sidebar {
   width: 260px !important;
 }
 
-/* Page content width */
 .md-content {
-  max-width: 1020px;
+  max-width: 1100px;
 }
+
+/* Code block legibility */
+.md-typeset pre {
+  border-radius: 8px;
+  padding: 1rem;
+  border: 1px solid rgba(255,255,255,0.03);
+}
+
+/* Increased table cell padding for readability */
+.md-typeset table th, .md-typeset table td {
+  padding: 0.6rem 0.8rem;
+}
+
+/* Accessibility: visible focus ring */
+a:focus, button:focus, input:focus {
+  outline: 3px solid rgba(20,184,166,0.16);
+  outline-offset: 2px;
+}
+
+/* Branding: use primary accent for links */
+.md-typeset a {
+  color: var(--md-primary-fg) !important;
+}
+
+/* Do not hide the theme toggle — use Material's built-in control */
+/* (No rules here that hide or force theme controls.) */
