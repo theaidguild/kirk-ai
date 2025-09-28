@@ -7,6 +7,10 @@ cd "$ROOT_DIR"
 # Configurable knobs (export to override)
 CHROMEDP_CONC="${CHROMEDP_CONC:-3}"   # number of parallel chromedp workers
 SKIP_CHROMEDP="${SKIP_CHROMEDP:-0}"   # set to 1 to skip chromedp step
+# New per-crawler skip flags (set to 1 to skip the corresponding crawler)
+SKIP_COLLY="${SKIP_COLLY:-0}"         # set to 1 to skip colly crawler
+SKIP_REQUESTS="${SKIP_REQUESTS:-0}"   # set to 1 to skip requests crawler
+SKIP_API="${SKIP_API:-0}"             # set to 1 to skip API collector
 BUILD_DIR="./build/tools"
 
 # Crawler concurrency knobs
@@ -158,7 +162,16 @@ rm -f tpusa_crawl/discovered_urls.filtered.txt tpusa_crawl/robots_exclude.txt ||
 # Run network-bound crawlers concurrently (colly, requests, api)
 # Make this stage tolerant to SIGINT so we can continue to processing on Ctrl+C.
 set +e
-echo "Starting crawlers in parallel (colly + requests + api)..."
+# Determine which crawlers will run based on SKIP_* flags and print a concise summary.
+modes_to_run=()
+[ "${SKIP_COLLY:-0}" != "1" ] && modes_to_run+=("colly")
+[ "${SKIP_REQUESTS:-0}" != "1" ] && modes_to_run+=("requests")
+[ "${SKIP_API:-0}" != "1" ] && modes_to_run+=("api")
+if [ "${#modes_to_run[@]}" -eq 0 ]; then
+  echo "All crawlers are disabled (SKIP_COLLY=${SKIP_COLLY:-0} SKIP_REQUESTS=${SKIP_REQUESTS:-0} SKIP_API=${SKIP_API:-0}). Skipping crawling stage."
+else
+  echo "Starting crawlers in parallel (${modes_to_run[*]})..."
+fi
 
 NUM_URLS=$(wc -l < tpusa_crawl/discovered_urls.txt || echo 0)
 
@@ -184,13 +197,25 @@ launch_workers() {
   done
 }
 
-# Launch colly workers
-launch_workers colly "$COLLY_PROCS" "-parallel ${COLLY_PARALLEL}"
-# Launch requests workers
-launch_workers requests "$REQUESTS_PROCS" "-workers ${REQUESTS_WORKERS}"
-# Run API collector once (lightweight)
-"$CRAWLER_BIN" api 2>&1 | tee tpusa_crawl/logs/api_collector.log &
-pids+=($!)
+# Launch colly workers (skip if requested)
+if [ "${SKIP_COLLY:-0}" != "1" ]; then
+  launch_workers colly "$COLLY_PROCS" "-parallel ${COLLY_PARALLEL}"
+else
+  echo "Skipping colly workers (SKIP_COLLY=1)"
+fi
+# Launch requests workers (skip if requested)
+if [ "${SKIP_REQUESTS:-0}" != "1" ]; then
+  launch_workers requests "$REQUESTS_PROCS" "-workers ${REQUESTS_WORKERS}"
+else
+  echo "Skipping requests workers (SKIP_REQUESTS=1)"
+fi
+# Run API collector once (lightweight) — skip if requested
+if [ "${SKIP_API:-0}" != "1" ]; then
+  "$CRAWLER_BIN" api 2>&1 | tee tpusa_crawl/logs/api_collector.log &
+  pids+=($!)
+else
+  echo "Skipping api collector (SKIP_API=1)"
+fi
 
 # Wait for crawlers to finish (but allow Ctrl+C to abort waiting and proceed)
 echo "Waiting for crawlers to complete..."
