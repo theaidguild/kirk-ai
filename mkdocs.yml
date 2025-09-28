@@ -138,7 +138,7 @@ markdown_extensions:
 
 nav:
   - Get Started:
-      - Welcome: tpusa_ai.md
+      - Welcome: index.md
       # - TPUSA AI: tpusa_ai.md
       - Installation: installation.md
       - Quickstart: usage.md
@@ -147,7 +147,7 @@ nav:
       - Core Components: commands.md
       - Advanced Features:
           - Contributing: contributing.md
-  - Clients:
+  - Commands:
       - Overview: commands.md
-  - Integrations:
+  - Installation:
       - Overview: installation.md
