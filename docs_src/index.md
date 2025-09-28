@@ -43,12 +43,55 @@ The specialized AI is designed for:
 
 - See `tools/processor/prepare_embeddings_data.go` and other helper scripts for implementation details. If you want me to add a single-command script or Make target that reproduces the pipeline, I can add it.
 
-## Demo video
+## Interactive Demo
 
-<video controls playsinline style="max-width:100%; height:auto; border-radius:8px; box-shadow:0 6px 20px rgba(0,0,0,0.45);">
-  <source src="../assets/media/demo.mp4" type="video/mp4">
-  Your browser does not support HTML5 video playback. You can download the demo file instead: [Download demo](../assets/media/demo.mp4).
-</video>
+See kirk-ai in action! The terminal below shows a live demonstration of the key features:
+
+<div id="termynal" data-termynal data-ty-typeDelay="40" data-ty-lineDelay="700">
+    <span data-ty="input">./kirk-ai models</span>
+    <span data-ty="progress"></span>
+    <span data-ty>Available models:</span>
+    <span data-ty>✓ llama3.2:3b (chat, coding)</span>
+    <span data-ty>✓ gemma2:9b (chat, reasoning)</span>
+    <span data-ty>✓ nomic-embed-text (embeddings)</span>
+    <span data-ty>✓ qwen2.5-coder:7b (coding specialist)</span>
+    <span data-ty></span>
+    <span data-ty="input">./kirk-ai chat "What are the key benefits of retrieval-augmented generation?"</span>
+    <span data-ty="progress"></span>
+    <span data-ty="success">Using model: gemma2:9b</span>
+    <span data-ty></span>
+    <span data-ty>🤖 RAG combines the best of both worlds:</span>
+    <span data-ty></span>
+    <span data-ty>• **Knowledge Access**: Retrieves relevant context from your documents</span>
+    <span data-ty>• **Accuracy**: Grounds responses in specific source material</span>
+    <span data-ty>• **Freshness**: Works with updated content without retraining</span>
+    <span data-ty>• **Transparency**: Shows which sources informed the answer</span>
+    <span data-ty></span>
+    <span data-ty="input">./kirk-ai embed "Machine learning and AI development best practices"</span>
+    <span data-ty="info">Using model: nomic-embed-text</span>
+    <span data-ty="progress"></span>
+    <span data-ty>✅ Generated 768-dimensional embedding vector</span>
+    <span data-ty>[0.0423, -0.1892, 0.3441, 0.0891, ...]</span>
+    <span data-ty></span>
+    <span data-ty="input">./kirk-ai rag "How do I optimize model performance?" --embeddings my_docs.json</span>
+    <span data-ty="info">Loaded 1,247 embeddings for RAG</span>
+    <span data-ty="info">Using RAG-optimized model: gemma2:9b</span>
+    <span data-ty="progress"></span>
+    <span data-ty>🎯 **Answer**: Based on your documentation:</span>
+    <span data-ty></span>
+    <span data-ty>1. **Batch Processing**: Use --batch-size and --concurrency flags</span>
+    <span data-ty>2. **Rate Limiting**: Set --rate to avoid API throttling</span>
+    <span data-ty>3. **Model Selection**: Use --prefer-fast for lower latency</span>
+    <span data-ty>4. **Context Optimization**: Tune --context-size and --similarity-threshold</span>
+    <span data-ty></span>
+    <span data-ty="success">💡 Performance tip: Use progressive loading with --progressive for large contexts!</span>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        new Termynal('#termynal');
+    });
+</script>
 
 ## Contributing
 

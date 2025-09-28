@@ -85,6 +85,10 @@ extra:
 
 extra_css:
   - assets/stylesheets/overrides.css
+  - assets/css/termynal.css
+
+extra_javascript:
+  - assets/js/termynal.js
 
 # Extensions
 markdown_extensions:
