@@ -14,6 +14,9 @@ import (
 	"github.com/PuerkitoBio/goquery"
 )
 
+var excludeHostRE = regexp.MustCompile(`(?i)rumble\.com`)
+var excludePathRE = regexp.MustCompile(`(?i)/c/turningpointusa`) // skip Rumble channel path used by TPUSA
+
 func fetchAndParse(u string) (*goquery.Document, error) {
 	resp, err := http.Get(u)
 	if err != nil {
@@ -24,6 +27,19 @@ func fetchAndParse(u string) (*goquery.Document, error) {
 }
 
 func isCrawlable(u string) bool {
+	// quick parse to examine host/path
+	parsed, err := url.Parse(u)
+	if err == nil {
+		// exclude known external hosts
+		if excludeHostRE.MatchString(parsed.Host) {
+			return false
+		}
+		// exclude specific problematic paths (e.g. Rumble channel pages)
+		if excludePathRE.MatchString(parsed.Path) {
+			return false
+		}
+	}
+
 	skip := regexp.MustCompile(`(?i)\.(pdf|jpg|png|gif|css|js)$|/wp-admin/|/wp-content/|/feed/|#|mailto:`)
 	return !skip.MatchString(u)
 }
@@ -54,6 +70,10 @@ func runRequestsCrawler() {
 			go func() {
 				defer wg.Done()
 				for u := range jobs {
+					if !isCrawlable(u) {
+						log.Println("requests crawler: skipping excluded URL:", u)
+						continue
+					}
 					doc, err := fetchAndParse(u)
 					if err != nil {
 						log.Println("error fetching", u, err)
@@ -84,6 +104,10 @@ func runRequestsCrawler() {
 
 		// Push jobs
 		for _, u := range urls {
+			if !isCrawlable(u) {
+				log.Println("requests crawler: skipping excluded URL from input list:", u)
+				continue
+			}
 			jobs <- u
 		}
 		close(jobs)
