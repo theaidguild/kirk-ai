@@ -138,11 +138,11 @@ markdown_extensions:
 
 nav:
   - Get Started:
-      - Welcome: index.md
-      - TPUSA AI: tpusa_ai.md
+      - Welcome: tpusa_ai.md
+      # - TPUSA AI: tpusa_ai.md
       - Installation: installation.md
       - Quickstart: usage.md
-  - Servers:
+  - Architecture:
       - Overview: architecture.md
       - Core Components: commands.md
       - Advanced Features:
