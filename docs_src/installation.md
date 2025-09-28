@@ -1,29 +1,36 @@
 # Installation
 
-Requirements:
+## Requirements
 
 - Go 1.19 or higher
-- Ollama (optional, for functional testing)
+- Ollama (optional) for model-based features
 
-Install from source:
+## Quickstart
+
+1. Clone the repository
 
 ```bash
-# download dependencies
+git clone https://github.com/theaidguild/kirk-ai.git
+cd kirk-ai
+```
+
+2. Download dependencies and build
+
+```bash
 go mod download && go mod tidy
 
-# build
 go build -v .
 ```
 
-Run directly for development:
+3. Run locally
 
 ```bash
-go run main.go
+./kirk-ai --help
 ```
 
-If you want to serve docs locally during writing:
+For documentation preview:
 
 ```bash
-pip install mkdocs
-mkdocs serve
+pip install -r docs_requirements.txt
+mkdocs serve -f mkdocs.yml
 ```

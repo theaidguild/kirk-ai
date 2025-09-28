@@ -1,7 +1,15 @@
 site_name: kirk-ai
-site_description: "CLI for interacting with Ollama AI models"
-repo_name: theaidguild/kirk-ai
-repo_url: https://github.com/theaidguild/kirk-ai
+site_description: "kirk-ai — CLI for interacting with Ollama AI models"
+site_author: The Aid Guild
+
+# Logo and favicon
+logo: assets/images/logo.svg
+favicon: assets/images/logo.svg
+
+# Edit URI (optional) — enable 'Edit on GitHub' links
+edit_uri: blob/main/
+
+site_url: https://theaidguild.github.io/kirk-ai/
 
 docs_dir: docs_src
 site_dir: site
@@ -23,9 +31,12 @@ theme:
   font:
     text: Roboto
     code: Roboto Mono
+  icon:
+    repo: fontawesome/brands/github
 
 plugins:
   - search
+  - git-revision-date
 
 extra:
   social:
@@ -35,10 +46,20 @@ extra:
 extra_css:
   - assets/stylesheets/overrides.css
 
+extra_javascript:
+  - assets/javascripts/copy-page.js
+
 nav:
-  - Home: index.md
-  - Installation: installation.md
-  - Usage: usage.md
-  - Commands: commands.md
-  - Architecture: architecture.md
-  - Contributing: contributing.md
+  - Get Started:
+      - Welcome: index.md
+      - Installation: installation.md
+      - Quickstart: usage.md
+  - Servers:
+      - Overview: architecture.md
+      - Core Components: commands.md
+      - Advanced Features: 
+          - Contributing: contributing.md
+  - Clients:
+      - Overview: commands.md
+  - Integrations:
+      - Overview: installation.md

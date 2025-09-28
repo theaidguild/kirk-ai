@@ -1,13 +1,19 @@
 # Contributing
 
-Thanks for considering contributing! Guidelines:
+Thanks for contributing! We welcome fixes, documentation improvements, and new features.
 
-- Run `go fmt ./...` before committing.
-- Run `go vet ./...` to catch vet issues.
-- Add tests alongside code in `_test.go` files.
-- For documentation changes, edit the markdown files in `docs_src/` and preview locally with `mkdocs serve`.
+## Development workflow
 
-To publish docs changes:
+- Fork the repo and create a feature branch.
+- Run `go fmt ./...` and `go vet ./...` before committing.
+- Add tests alongside your code changes.
 
-1. Edit files in `docs_src/` and commit to `main`.
-2. Push the commit to `main` and the Pages workflow will build and deploy the site.
+## Docs contributions
+
+- Edit markdown files under `docs_src/`.
+- Preview locally with `mkdocs serve -f mkdocs.yml`.
+- Open a PR against `main` — the Pages CI pipeline will build and deploy the docs automatically.
+
+## Reviewing
+
+Keep changes small and focused. For large changes, open an issue first to discuss the approach.

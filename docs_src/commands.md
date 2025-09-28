@@ -1,17 +1,39 @@
 # Commands
 
-This project uses the Cobra CLI framework. The main commands are:
+This project uses Cobra for CLI command structure. Below are examples and common flags.
 
-- `chat` — interact with chat models
-- `embed` — generate vector embeddings
-- `models` — list available models
-- `benchmark` — run model benchmarks
-- `code` — generate code using the recommended coding model
+## chat
 
-Each command supports `--model`, `--verbose`, and `--stream` flags where appropriate.
-
-Example:
+Use the `chat` command to send prompts to a selected model.
 
 ```bash
-./kirk-ai chat "Explain recursion" --verbose
+./kirk-ai chat "Write a short poem about the sea"
+```
+
+Flags:
+- `--model` — specify model name
+- `--verbose` — show metadata
+
+## embed
+
+Generate embeddings for text snippets.
+
+```bash
+./kirk-ai embed "Document text to embed"
+```
+
+## models
+
+List models available from the Ollama server.
+
+```bash
+./kirk-ai models
+```
+
+## code
+
+Generate code snippets or helper functions using the recommended coding model.
+
+```bash
+./kirk-ai code "Create a function that reverses a string"
 ```

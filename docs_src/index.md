@@ -1,8 +1,9 @@
 # kirk-ai
 
-Lightweight CLI for interacting with Ollama AI models.
+![Hero image](assets/images/hero.svg)
 
-Welcome — this documentation covers how to install, build, and use the `kirk-ai` command-line tool.
+**kirk-ai** is a compact command-line interface crafted to interact with Ollama AI models. This site provides guided documentation to get you started quickly, explain the architecture, and help you integrate `kirk-ai` into your workflows.
+
 
 ## Quick links
 
@@ -11,3 +12,20 @@ Welcome — this documentation covers how to install, build, and use the `kirk-a
 - Commands
 - Architecture
 - Contributing
+
+---
+
+## Why kirk-ai?
+
+- Minimal, focused CLI for model interactions
+- Clear separation between API client, templates and commands
+- Lightweight and easily extensible
+
+
+### Example — quick chat
+
+```bash
+./kirk-ai chat "Hello — what's new?"
+```
+
+This repository is designed for contributors and users alike. Use the sidebar to navigate deeper sections or search from the top bar.

@@ -1,12 +1,14 @@
 # Architecture
 
-kirk-ai follows a simple modular architecture:
+kirk-ai is organized to keep responsibilities separated and the codebase easy to reason about.
 
-- `cmd/` — Cobra commands that implement CLI entry points
-- `internal/client` — Ollama HTTP client
-- `internal/models` — request/response structs
-- `internal/templates` — prompt templates used for code generation
+- `cmd/` — CLI command definitions and wiring (Cobra)
+- `internal/client` — HTTP client for Ollama interactions
+- `internal/templates` — Prompt templates used for code generation tasks
+- `internal/models` — Request/response structs
 
-The codebase intentionally keeps dependencies minimal and relies on the Go standard library for HTTP operations.
+The CLI follows a simple flow: parse flags → select model → call client → format output.
 
-See the `internal/` folder for implementation details and the `cmd/` folder for how commands are wired together.
+## Extending the CLI
+
+Add a new command under `cmd/` and register it in `root.go`. Use existing helpers for model selection and error handling to keep behavior consistent.
