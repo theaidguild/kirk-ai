@@ -30,6 +30,7 @@ build:
 	@echo "Building $(BINARY_NAME)..."
 	@mkdir -p $(BUILD_DIR)
 	go build -o $(BUILD_DIR)/$(BINARY_NAME) .
+	cp $(BUILD_DIR)/$(BINARY_NAME) .
 
 # Delete crawling data
 .PHONY: uncrawl
