@@ -197,6 +197,22 @@ pip install mkdocs
 mkdocs serve -f mkdocs.yml
 ```
 
+### Documentation theme
+
+The project documentation uses the Material for MkDocs theme. To preview the docs locally with the same theme used in GitHub Pages, install the docs requirements and run the MkDocs server:
+
+```bash
+pip install -r docs_requirements.txt
+mkdocs serve -f mkdocs.yml
+```
+
+If you only want a minimal preview without the theme extras, you can install just MkDocs:
+
+```bash
+pip install mkdocs
+mkdocs serve -f mkdocs.yml
+```
+
 To publish changes:
 
 1. Edit Markdown files under `docs_src/`.
