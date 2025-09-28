@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 300" preserveAspectRatio="none">
+  <defs>
+    <linearGradient id="g" x1="0" x2="1">
+      <stop offset="0%" stop-color="#0b1020"/>
+      <stop offset="50%" stop-color="#0f2a2a"/>
+      <stop offset="100%" stop-color="#071020"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="300" fill="url(#g)"/>
+  <g fill="#14B8A6" font-family="Roboto, sans-serif" font-size="48" font-weight="700">
+    <text x="60" y="120">kirk-ai</text>
+  </g>
+</svg>

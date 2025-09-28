@@ -1,3 +1,27 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+    <url>
+         <loc>https://theaidguild.github.io/kirk-ai/</loc>
+         <lastmod>2025-09-28</lastmod>
+    </url>
+    <url>
+         <loc>https://theaidguild.github.io/kirk-ai/architecture/</loc>
+         <lastmod>2025-09-28</lastmod>
+    </url>
+    <url>
+         <loc>https://theaidguild.github.io/kirk-ai/commands/</loc>
+         <lastmod>2025-09-28</lastmod>
+    </url>
+    <url>
+         <loc>https://theaidguild.github.io/kirk-ai/contributing/</loc>
+         <lastmod>2025-09-28</lastmod>
+    </url>
+    <url>
+         <loc>https://theaidguild.github.io/kirk-ai/installation/</loc>
+         <lastmod>2025-09-28</lastmod>
+    </url>
+    <url>
+         <loc>https://theaidguild.github.io/kirk-ai/usage/</loc>
+         <lastmod>2025-09-28</lastmod>
+    </url>
 </urlset>
