@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>kirk-ai — Project Documentation</title>
+  <style>
+    body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; line-height:1.6; padding:48px; max-width:900px; margin:0 auto; color:#0f172a; }
+    h1 { color:#0b4; }
+    pre { background:#f3f4f6; padding:12px; overflow:auto; }
+    a.button { display:inline-block; background:#0ea5e9; color:white; padding:10px 14px; border-radius:6px; text-decoration:none; }
+    footer { margin-top:48px; color:#64748b; font-size:14px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>kirk-ai</h1>
+    <p>Lightweight CLI for interacting with Ollama AI models.</p>
+  </header>
+
+  <main>
+    <section>
+      <h2>Overview</h2>
+      <p>
+        This repository provides a command-line tool called <code>kirk-ai</code> to interact with Ollama models for chat, code generation, translation, embeddings, and benchmarking.
+      </p>
+    </section>
+
+    <section>
+      <h2>Docs & Usage</h2>
+      <p>
+        Build the binary locally and run the commands from the repository root. See <code>README.md</code> for full usage examples.
+      </p>
+      <p>
+        Quick commands:
+      </p>
+      <pre>
+# download dependencies
+go mod download && go mod tidy
+
+# build
+go build -v .
+
+# show help
+./kirk-ai --help
+      </pre>
+    </section>
+
+    <section>
+      <h2>GitHub Pages</h2>
+      <p>
+        This site is published via GitHub Pages and serves the static content in the <code>docs/</code> folder. The repository includes a GitHub Action that deploys the contents of <code>docs/</code> to Pages when changes are pushed to <code>main</code>.
+      </p>
+      <p>
+        If the site doesn't appear automatically, go to your repository Settings → Pages and ensure the Source is set to "Deploy from a GitHub Action" or the "docs/" folder on the <code>main</code> branch.
+      </p>
+      <p>
+        To edit this page, modify <code>docs/index.html</code> and push to <code>main</code>.
+      </p>
+    </section>
+  </main>
+
+  <footer>
+    <p>Generated: Sep 28, 2025</p>
+  </footer>
+</body>
+</html>

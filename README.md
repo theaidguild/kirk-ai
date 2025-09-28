@@ -186,6 +186,16 @@ func (c *OllamaClient) ChatStream(model, prompt string, callback func(string)) e
 }
 ```
 
+## GitHub Pages
+
+This repository includes a simple static site served from the `docs/` folder and an automated GitHub Actions workflow that deploys it on pushes to the `main` branch (`.github/workflows/pages.yml`). After the first successful deployment the site will be available at:
+
+https://theaidguild.github.io/kirk-ai/
+
+If the site does not appear automatically, open the repository Settings → Pages and ensure the source is set to "Deploy from a GitHub Action" or to the `docs/` folder on the `main` branch.
+
+To update the site, edit files under `docs/` (for example `docs/index.html`) and push to `main`.
+
 ## Contributing
 
 Feel free to extend this basic client with additional features like:
