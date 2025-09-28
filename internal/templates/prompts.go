@@ -66,17 +66,6 @@ Please provide your solution:`,
 **Debugging Analysis**:`,
 			Variables: []string{"prompt"},
 		},
-		"translation": {
-			Name:        "Translation",
-			Description: "Translate text between languages",
-			Template: `You are a professional translator. Translate the following text accurately while preserving meaning and context:
-
-**Source Text**: {{.prompt}}
-**Target Language**: {{.target_language}}
-
-**Translation**:`,
-			Variables: []string{"prompt", "target_language"},
-		},
 		"reasoning": {
 			Name:        "Reasoning",
 			Description: "Step-by-step logical reasoning",
@@ -170,14 +159,6 @@ func GetOptimalTemplate(prompt string) string {
 	for _, keyword := range debugKeywords {
 		if strings.Contains(promptLower, keyword) {
 			return "debugging"
-		}
-	}
-
-	// Translation keywords
-	translationKeywords := []string{"translate", "translation", "convert to", "in chinese", "in spanish", "in french"}
-	for _, keyword := range translationKeywords {
-		if strings.Contains(promptLower, keyword) {
-			return "translation"
 		}
 	}
 
