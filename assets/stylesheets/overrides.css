@@ -1,54 +1,76 @@
-/* Overrides for Material theme dark mode and improved UX */
-/* Basic improvements for code blocks, headers, and background */
+/* Force dark-only theme and ensure high contrast for readability */
 
 :root {
-  --md-default-bg: #ffffff;
-  --md-accent-bg: #f6f8f9;
+  --kirk-bg: #071020;
+  --kirk-surface: #0b1020;
+  --kirk-muted-surface: #0a1320;
+  --kirk-text: #e6eef6;
+  --kirk-heading: #d1f3ea;
+  --kirk-link: #6ee7b7;
+  --kirk-code-bg: #081225;
+  --kirk-code-text: #e6eef6;
+  --kirk-accent: #14b8a6;
 }
 
-/* Dark mode color tweaks */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --md-default-bg: #0b1020;
-    --md-accent-bg: #071020;
-  }
-
-  .md-content {
-    color: #e6eef6;
-  }
-
-  .md-typeset blockquote {
-    background: rgba(255,255,255,0.02);
-    border-left-color: rgba(255,255,255,0.06);
-  }
-
-  .md-typeset pre, .md-typeset code {
-    background: #081225;
-    color: #dbeafe;
-  }
+/* Apply dark background and readable text globally */
+html, body, .md-content, .md-main, .md-typeset {
+  background-color: var(--kirk-bg) !important;
+  color: var(--kirk-text) !important;
 }
 
-/* Improve code block legibility */
-.md-typeset pre {
+/* Header, nav, and footer surfaces */
+.md-header, .md-header__inner, .md-footer {
+  background-color: var(--kirk-surface) !important;
+  color: var(--kirk-text) !important;
+}
+
+/* Headings */
+.md-typeset h1, .md-typeset h2, .md-typeset h3 {
+  color: var(--kirk-heading) !important;
+}
+
+/* Links */
+.md-typeset a {
+  color: var(--kirk-link) !important;
+}
+
+/* Code blocks and inline code */
+.md-typeset pre, .md-typeset code {
+  background: var(--kirk-code-bg) !important;
+  color: var(--kirk-code-text) !important;
   border-radius: 8px;
-  padding: 1rem;
-  box-shadow: 0 1px 0 rgba(0,0,0,0.04);
 }
 
-/* Make header a little less tall on small screens */
+.md-typeset pre {
+  padding: 1rem !important;
+  box-shadow: 0 1px 0 rgba(0,0,0,0.4) !important;
+}
+
+/* Tables */
+.md-typeset table th, .md-typeset table td {
+  padding: 0.6rem 0.8rem;
+  border-color: rgba(255,255,255,0.04);
+}
+
+/* Muted surface for sidebars, TOC */
+.md-sidebar, .md-nav, .md-search {
+  background-color: var(--kirk-muted-surface) !important;
+}
+
+/* Ensure focus outlines are visible on dark background */
+a:focus, button:focus, input:focus {
+  outline: 3px solid rgba(110,231,183,0.16) !important;
+  outline-offset: 2px !important;
+}
+
+/* Smaller header on mobile */
 @media (max-width: 768px) {
   header.md-header {
     min-height: 44px;
   }
 }
 
-/* Subtle focus outlines for accessibility */
-a:focus, button:focus {
-  outline: 3px solid rgba(16,185,129,0.16);
-  outline-offset: 2px;
-}
-
-/* Slightly larger table cell padding */
-.md-typeset table th, .md-typeset table td {
-  padding: 0.6rem 0.8rem;
+/* Hide the theme toggle if present (defensive) */
+.md-header__toggle, .md-toggle, .md-footer .md-toggle {
+  display: none !important;
 }
