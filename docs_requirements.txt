@@ -2,4 +2,3 @@ mkdocs>=1.5
 mkdocs-material>=9.0
 python-markdown-math>=0.8
 pymdown-extensions>=9.0
-git-revision-date>=0.3
