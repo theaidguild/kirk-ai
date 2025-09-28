@@ -28,6 +28,39 @@ var ragCmd = &cobra.Command{
 	Run:   runRAGCommand,
 }
 
+func debugEmbeddingSearch(queryEmbedding []float64, embeddings []embeddingItem, query string) {
+	fmt.Printf("\n🔍 DEBUGGING: Searching for '%s' in %d embeddings\n", query, len(embeddings))
+
+	// Find chunks that actually contain "Erika Kirk" in content
+	var erikaChunks []embeddingItem
+	for _, item := range embeddings {
+		content := getContentFromEmbedding(item)
+		if strings.Contains(strings.ToLower(content), "erika kirk") {
+			erikaChunks = append(erikaChunks, item)
+		}
+	}
+
+	fmt.Printf("📝 Found %d chunks containing 'Erika Kirk' in content\n", len(erikaChunks))
+
+	// Calculate similarities for Erika chunks
+	if len(erikaChunks) > 0 {
+		fmt.Printf("🎯 Similarity scores for Erika Kirk chunks:\n")
+		for i, chunk := range erikaChunks {
+			if len(chunk.Embedding) > 0 {
+				similarity := cosineSimilarity(queryEmbedding, chunk.Embedding)
+				content := getContentFromEmbedding(chunk)
+				preview := content
+				if len(preview) > 150 {
+					preview = preview[:150] + "..."
+				}
+				fmt.Printf("  [%d] Chunk %d: %.3f similarity\n", i+1, chunk.ChunkIndex, similarity)
+				fmt.Printf("      Content: %s\n", preview)
+			}
+		}
+	}
+	fmt.Printf("----------------------------------------\n")
+}
+
 func runRAGCommand(cmd *cobra.Command, args []string) {
 	start := time.Now()
 	question := strings.Join(args, " ")
@@ -61,6 +94,12 @@ func runRAGCommand(cmd *cobra.Command, args []string) {
 		fmt.Printf("Generated query embedding in %v\n", time.Since(embedStart))
 	}
 
+	if verbose {
+		fmt.Printf("Generated query embedding in %v\n", time.Since(embedStart))
+		// Add debugging
+		debugEmbeddingSearch(queryEmbedding, embeddings, question)
+	}
+
 	// Determine context size and similarity threshold based on configuration
 	contextSize := ragContextSize
 	similarityThreshold := ragSimilarityThreshold
@@ -71,7 +110,10 @@ func runRAGCommand(cmd *cobra.Command, args []string) {
 		if contextSize < 5 {
 			contextSize = 5
 		}
-		similarityThreshold = 0.5 // More aggressive filtering for progressive loading
+		// Only override threshold if user didn't specify one explicitly
+		if ragSimilarityThreshold == 0.0 {
+			similarityThreshold = 0.5 // More aggressive filtering for progressive loading
+		}
 		if verbose {
 			fmt.Printf("Using progressive context loading: starting with %d chunks (threshold: %.2f)\n", contextSize, similarityThreshold)
 		}
