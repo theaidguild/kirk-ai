@@ -31,6 +31,16 @@ func NewOllamaClient(baseURL string) *OllamaClient {
 	}
 }
 
+// NewOllamaClientWithTimeout creates a new Ollama client with custom timeout
+func NewOllamaClientWithTimeout(baseURL string, timeout time.Duration) *OllamaClient {
+	return &OllamaClient{
+		BaseURL: baseURL,
+		Client: &http.Client{
+			Timeout: timeout,
+		},
+	}
+}
+
 // Chat sends a chat request to Ollama and returns the response
 func (c *OllamaClient) Chat(model, prompt string) (*models.ChatResponse, error) {
 	if model == "" {
@@ -173,7 +183,21 @@ func (c *OllamaClient) SelectModelByCapability(models []string, capability strin
 				return model
 			}
 		}
-	} else {
+	} else if capability == "rag" {
+		// For RAG, prefer faster, smaller models for better performance
+		fastModels := []string{"llama3.2:1b", "gemma2:2b", "qwen2.5:1.5b", "llama3.2:3b"}
+		for _, fast := range fastModels {
+			for _, model := range models {
+				if strings.Contains(strings.ToLower(model), fast) {
+					return model
+				}
+			}
+		}
+		// Fallback to regular chat model selection
+		capability = "chat"
+	}
+
+	if capability == "chat" {
 		// Prefer gemma3:4b for chat and other tasks
 		for _, model := range models {
 			if strings.Contains(strings.ToLower(model), "gemma3") {
