@@ -76,3 +76,4 @@ tmp/
 .tool-versions
 tpusa_crawl
 final_embeddings.json
+tpusa_embeddings.json
