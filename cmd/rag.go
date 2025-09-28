@@ -18,7 +18,8 @@ var (
 	ragMaxContextLength    int
 	ragProgressive         bool
 	ragTimeout             int
-	ragPreferFast          bool // new flag: prefer faster models for lower latency
+	ragPreferFast          bool   // new flag: prefer faster models for lower latency
+	ragModel               string // new flag: explicit chat model to use for RAG (was ragChatModel)
 )
 
 var ragCmd = &cobra.Command{
@@ -221,10 +222,6 @@ func getContentFromEmbedding(item embeddingItem) string {
 	return ""
 }
 
-func generateRAGAnswer(question, context string) (string, error) {
-	return generateRAGAnswerWithTimeout(question, context, 0)
-}
-
 func generateRAGAnswerWithTimeout(question, context string, timeout time.Duration) (string, error) {
 	// Select chat model optimized for RAG
 	models, err := ollamaClient.ListModels()
@@ -232,34 +229,54 @@ func generateRAGAnswerWithTimeout(question, context string, timeout time.Duratio
 		return "", err
 	}
 
-	// Use RAG-optimized model selection
-	selectedModel := ollamaClient.SelectModelByCapability(models, "rag")
-	if ragPreferFast {
-		// Prefer smaller/faster model candidates when requested
-		fastCandidates := []string{"1b", "2.5", "qwen2.5", "llama3", "mistral", "gemma2"}
-		for _, pref := range fastCandidates {
-			for _, m := range models {
-				if strings.Contains(strings.ToLower(m), strings.ToLower(pref)) {
-					selectedModel = m
-					break
-				}
-			}
-			if selectedModel != "" {
+	// Honor explicit chat model flag if provided
+	var selectedModel string
+	if ragModel != "" {
+		// Try to match the provided model string against available models (exact or substring, case-insensitive)
+		for _, m := range models {
+			if strings.EqualFold(m, ragModel) || strings.Contains(strings.ToLower(m), strings.ToLower(ragModel)) {
+				selectedModel = m
 				break
 			}
 		}
+		if selectedModel == "" {
+			return "", fmt.Errorf("requested model %q not found. Available models: %v", ragModel, models)
+		}
+	} else {
+		// Use RAG-optimized model selection
+		selectedModel = ollamaClient.SelectModelByCapability(models, "rag")
+		if ragPreferFast {
+			// Prefer smaller/faster model candidates when requested
+			fastCandidates := []string{"1b", "2.5", "qwen2.5", "llama3", "mistral", "gemma2"}
+			for _, pref := range fastCandidates {
+				for _, m := range models {
+					if strings.Contains(strings.ToLower(m), strings.ToLower(pref)) {
+						selectedModel = m
+						break
+					}
+				}
+				if selectedModel != "" {
+					break
+				}
+			}
+		}
+
+		if selectedModel == "" {
+			// Fallback to regular chat model
+			selectedModel = selectChatModel(models)
+		}
 	}
 
-	if selectedModel == "" {
-		// Fallback to regular chat model
-		selectedModel = selectChatModel(models)
-	}
 	if selectedModel == "" {
 		return "", fmt.Errorf("no suitable chat model found")
 	}
 
 	if verbose {
-		fmt.Printf("Using RAG-optimized model: %s\n", selectedModel)
+		if ragModel != "" {
+			fmt.Printf("Using user-specified RAG model: %s\n", selectedModel)
+		} else {
+			fmt.Printf("Using RAG-optimized model: %s\n", selectedModel)
+		}
 	}
 
 	// Build RAG prompt with explicit brevity instruction
@@ -335,6 +352,8 @@ func init() {
 		"Custom timeout in seconds for answer generation (0 = use default)")
 	ragCmd.Flags().BoolVar(&ragPreferFast, "prefer-fast", false,
 		"Prefer smaller/faster models for RAG (lower latency, possibly lower quality)")
+	ragCmd.Flags().StringVar(&ragModel, "rag-model", "",
+		"Specify chat model to use for RAG (overrides automatic selection)")
 
 	ragCmd.MarkFlagRequired("embeddings")
 }
