@@ -1,4 +1,14 @@
-mkdocs>=1.5
-mkdocs-material>=9.0
+# MkDocs and Material theme
+mkdocs>=1.5.0
+mkdocs-material>=9.4.0
+
+# Plugins for enhanced functionality
+mkdocs-minify-plugin>=0.7.0
+
+# Python Markdown extensions for rich content
+pymdown-extensions>=10.0.0
 python-markdown-math>=0.8
-pymdown-extensions>=9.0
+
+# Optional dependencies for advanced features
+pillow>=10.0.0  # For image processing in social cards
+cairosvg>=2.5.0  # For SVG support in social cards

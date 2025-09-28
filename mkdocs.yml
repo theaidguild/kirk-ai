@@ -1,11 +1,17 @@
 site_name: kirk-ai
-site_description: "kirk-ai — CLI for interacting with Ollama AI models"
+site_description: >-
+  kirk-ai — CLI for interacting with Ollama AI models.
+  A powerful command-line interface for seamless AI model interactions.
 site_author: The Aid Guild
-
-# Edit URI (optional) — enable 'Edit on GitHub' links
-edit_uri: blob/main/
-
 site_url: https://theaidguild.github.io/kirk-ai/
+
+# Repository
+repo_name: theaidguild/kirk-ai
+repo_url: https://github.com/theaidguild/kirk-ai
+edit_uri: blob/main/docs_src/
+
+# Copyright
+copyright: Copyright &copy; 2024 - 2025 The Aid Guild
 
 docs_dir: docs_src
 site_dir: site
@@ -13,26 +19,44 @@ site_dir: site
 theme:
   name: material
   # logo and favicon removed per request
-  palette:
-    - scheme: slate
-      primary: teal
-      accent: cyan
-      toggle:
-        icon: material/weather-sunny
-        name: Switch to light mode
-    - scheme: default
-      primary: teal
-      accent: cyan
-      toggle:
-        icon: material/weather-night
-        name: Switch to dark mode
   features:
-    - navigation.instant
-    - navigation.indexes
-    - search.highlight
-    - navigation.tabs
-    - header.autohide
+    - announce.dismiss
+    - content.action.edit
+    - content.action.view
+    - content.code.annotate
     - content.code.copy
+    - content.tooltips
+    - navigation.footer
+    - navigation.indexes
+    - navigation.instant
+    - navigation.instant.prefetch
+    - navigation.sections
+    - navigation.tabs
+    - navigation.top
+    - navigation.tracking
+    - search.highlight
+    - search.share
+    - search.suggest
+    - toc.follow
+  palette:
+    - media: "(prefers-color-scheme)"
+      toggle:
+        icon: material/link
+        name: Switch to light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: teal
+      accent: cyan
+      toggle:
+        icon: material/toggle-switch
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: teal
+      accent: cyan
+      toggle:
+        icon: material/toggle-switch-off
+        name: Switch to system preference
   language: en
   font:
     text: Roboto
@@ -41,15 +65,76 @@ theme:
     repo: fontawesome/brands/github
 
 plugins:
-  - search
+  - search:
+      separator: '[\s\u200b\-_,:!=\[\]()"`/]+|\.(?!\d)|&[lg]t;|(?!\b)(?=[A-Z][a-z])'
+  - minify:
+      minify_html: true
 
+# Additional configuration
 extra:
+  status:
+    new: Recently added
+    deprecated: Deprecated
   social:
     - icon: fontawesome/brands/github
       link: https://github.com/theaidguild/kirk-ai
+    - icon: fontawesome/brands/docker
+      link: https://hub.docker.com/r/theaidguild/kirk-ai/
+    - icon: fontawesome/brands/python
+      link: https://pypi.org/project/kirk-ai/
 
 extra_css:
   - assets/stylesheets/overrides.css
+
+# Extensions
+markdown_extensions:
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - toc:
+      permalink: true
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.betterem:
+      smart_enable: all
+  - pymdownx.caret
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.magiclink:
+      normalize_issue_symbols: true
+      repo_url_shorthand: true
+      user: theaidguild
+      repo: kirk-ai
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.snippets:
+      auto_append:
+        - includes/abbreviations.md
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+      combine_header_slug: true
+      slugify: !!python/object/apply:pymdownx.slugs.slugify
+        kwds:
+          case: lower
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
 
 nav:
   - Get Started:
