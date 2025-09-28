@@ -47,21 +47,6 @@ The specialized AI is designed for:
 
 See kirk-ai in action! The terminal below shows a live demonstration of the key features. Use the controls to replay, pause, or adjust the speed:
 
-<!-- Terminal Controls -->
-<div class="termynal-controls">
-    <button id="replayBtn" class="termynal-btn termynal-btn--replay">
-        🔄 Replay
-    </button>
-    <button id="pauseBtn" class="termynal-btn termynal-btn--pause">
-        ⏸️ Pause
-    </button>
-    <div class="termynal-speed-control">
-        <label for="speedRange">Speed:</label>
-        <input type="range" id="speedRange" min="0.5" max="3" step="0.5" value="1">
-        <span id="speedDisplay" class="termynal-speed-display">1x</span>
-    </div>
-</div>
-
 <!-- Progress Bar -->
 <div class="termynal-progress">
     <div id="termynalProgressBar" class="termynal-progress-bar"></div>
