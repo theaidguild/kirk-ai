@@ -39,8 +39,8 @@ The specialized AI is designed for:
 ## Demo video
 
 <video controls playsinline style="max-width:100%; height:auto; border-radius:8px; box-shadow:0 6px 20px rgba(0,0,0,0.45);">
-  <source src="./assets/media/demo.mp4" type="video/mp4">
-  Your browser does not support HTML5 video playback. You can download the demo file instead: [Download demo](./assets/media/demo.mp4).
+  <source src="../assets/media/demo.mp4" type="video/mp4">
+  Your browser does not support HTML5 video playback. You can download the demo file instead: [Download demo](../assets/media/demo.mp4).
 </video>
 
 ## Contributing
