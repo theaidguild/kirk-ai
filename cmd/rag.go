@@ -18,6 +18,7 @@ var (
 	ragMaxContextLength    int
 	ragProgressive         bool
 	ragTimeout             int
+	ragPreferFast          bool // new flag: prefer faster models for lower latency
 )
 
 var ragCmd = &cobra.Command{
@@ -26,39 +27,6 @@ var ragCmd = &cobra.Command{
 	Long:  `Use semantic search to find relevant context from embeddings and generate informed answers using RAG (Retrieval-Augmented Generation).`,
 	Args:  cobra.MinimumNArgs(1),
 	Run:   runRAGCommand,
-}
-
-func debugEmbeddingSearch(queryEmbedding []float64, embeddings []embeddingItem, query string) {
-	fmt.Printf("\n🔍 DEBUGGING: Searching for '%s' in %d embeddings\n", query, len(embeddings))
-
-	// Find chunks that actually contain "Erika Kirk" in content
-	var erikaChunks []embeddingItem
-	for _, item := range embeddings {
-		content := getContentFromEmbedding(item)
-		if strings.Contains(strings.ToLower(content), "erika kirk") {
-			erikaChunks = append(erikaChunks, item)
-		}
-	}
-
-	fmt.Printf("📝 Found %d chunks containing 'Erika Kirk' in content\n", len(erikaChunks))
-
-	// Calculate similarities for Erika chunks
-	if len(erikaChunks) > 0 {
-		fmt.Printf("🎯 Similarity scores for Erika Kirk chunks:\n")
-		for i, chunk := range erikaChunks {
-			if len(chunk.Embedding) > 0 {
-				similarity := cosineSimilarity(queryEmbedding, chunk.Embedding)
-				content := getContentFromEmbedding(chunk)
-				preview := content
-				if len(preview) > 150 {
-					preview = preview[:150] + "..."
-				}
-				fmt.Printf("  [%d] Chunk %d: %.3f similarity\n", i+1, chunk.ChunkIndex, similarity)
-				fmt.Printf("      Content: %s\n", preview)
-			}
-		}
-	}
-	fmt.Printf("----------------------------------------\n")
 }
 
 func runRAGCommand(cmd *cobra.Command, args []string) {
@@ -96,8 +64,6 @@ func runRAGCommand(cmd *cobra.Command, args []string) {
 
 	if verbose {
 		fmt.Printf("Generated query embedding in %v\n", time.Since(embedStart))
-		// Add debugging
-		debugEmbeddingSearch(queryEmbedding, embeddings, question)
 	}
 
 	// Determine context size and similarity threshold based on configuration
@@ -146,27 +112,49 @@ func runRAGCommand(cmd *cobra.Command, args []string) {
 	// Build context with length limit
 	contextStart := time.Now()
 	var contextParts []string
+	var usedResults []searchResult
 	totalLength := 0
 	maxLength := ragMaxContextLength
 	if maxLength == 0 {
 		maxLength = 8000 // Default max context length
 	}
 
+	seenKeys := map[string]bool{}
 	for _, result := range results {
+		// Deduplicate by ID or content prefix
+		key := result.Item.ID
+		if key == "" {
+			key = getContentFromEmbedding(result.Item)
+			if key == "" {
+				key = fmt.Sprintf("chunk_%d", result.Item.ChunkIndex)
+			}
+			if len(key) > 200 {
+				key = key[:200]
+			}
+		}
+		if seenKeys[key] {
+			continue
+		}
+		seenKeys[key] = true
+
 		content := getContentFromEmbedding(result.Item)
 		if content != "" {
-			if totalLength+len(content) > maxLength {
-				// Truncate content to fit within limit
-				remaining := maxLength - totalLength
+			remaining := maxLength - totalLength
+			if remaining <= 0 {
+				break
+			}
+			if len(content) > remaining {
 				if remaining > 100 { // Only add if meaningful
 					content = content[:remaining] + "..."
 					contextParts = append(contextParts, content)
 					totalLength += len(content)
+					usedResults = append(usedResults, result)
 				}
 				break
 			}
 			contextParts = append(contextParts, content)
 			totalLength += len(content)
+			usedResults = append(usedResults, result)
 		}
 	}
 
@@ -178,9 +166,14 @@ func runRAGCommand(cmd *cobra.Command, args []string) {
 
 	context := strings.Join(contextParts, "\n\n")
 
+	// Extra safety: final truncate to avoid exceeding max
+	if len(context) > maxLength {
+		context = context[:maxLength]
+	}
+
 	if verbose {
-		fmt.Printf("Context built in %v (%d characters, %d chunks)\n",
-			time.Since(contextStart), len(context), len(contextParts))
+		fmt.Printf("Context built in %v (%d characters, %d chunks, %d duplicates removed)\n",
+			time.Since(contextStart), len(context), len(contextParts), len(results)-len(usedResults))
 	}
 
 	// Generate answer using context with custom timeout if specified
@@ -203,8 +196,8 @@ func runRAGCommand(cmd *cobra.Command, args []string) {
 	if verbose {
 		fmt.Printf("\nPerformance Summary:\n")
 		fmt.Printf("- Total time: %v\n", time.Since(start))
-		fmt.Printf("- Context used: %d chunks (%.2f similarity threshold)\n", len(results), similarityThreshold)
-		for i, result := range results {
+		fmt.Printf("- Context used: %d chunks (%.2f similarity threshold)\n", len(usedResults), similarityThreshold)
+		for i, result := range usedResults {
 			fmt.Printf("  [%d] Chunk %d (similarity: %.3f)\n",
 				i+1, result.Item.ChunkIndex, result.Similarity)
 		}
@@ -241,6 +234,22 @@ func generateRAGAnswerWithTimeout(question, context string, timeout time.Duratio
 
 	// Use RAG-optimized model selection
 	selectedModel := ollamaClient.SelectModelByCapability(models, "rag")
+	if ragPreferFast {
+		// Prefer smaller/faster model candidates when requested
+		fastCandidates := []string{"1b", "2.5", "qwen2.5", "llama3", "mistral", "gemma2"}
+		for _, pref := range fastCandidates {
+			for _, m := range models {
+				if strings.Contains(strings.ToLower(m), strings.ToLower(pref)) {
+					selectedModel = m
+					break
+				}
+			}
+			if selectedModel != "" {
+				break
+			}
+		}
+	}
+
 	if selectedModel == "" {
 		// Fallback to regular chat model
 		selectedModel = selectChatModel(models)
@@ -253,8 +262,8 @@ func generateRAGAnswerWithTimeout(question, context string, timeout time.Duratio
 		fmt.Printf("Using RAG-optimized model: %s\n", selectedModel)
 	}
 
-	// Build RAG prompt
-	prompt := fmt.Sprintf(`Based on the following context, please answer the question. Be concise and accurate. If the answer is not clearly available in the context, say so.
+	// Build RAG prompt with explicit brevity instruction
+	prompt := fmt.Sprintf(`Answer concisely (limit ~250 words). Based on the following context, please answer the question. If the answer is not clearly available in the context, say so.
 
 Context:
 %s
@@ -324,6 +333,8 @@ func init() {
 		"Use progressive context loading for large context sizes")
 	ragCmd.Flags().IntVar(&ragTimeout, "timeout", 0,
 		"Custom timeout in seconds for answer generation (0 = use default)")
+	ragCmd.Flags().BoolVar(&ragPreferFast, "prefer-fast", false,
+		"Prefer smaller/faster models for RAG (lower latency, possibly lower quality)")
 
 	ragCmd.MarkFlagRequired("embeddings")
 }

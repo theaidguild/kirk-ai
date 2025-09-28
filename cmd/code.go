@@ -29,7 +29,7 @@ This command is optimized to use gemma3:4b when available for superior coding ca
 
 func runCodeCommand(cmd *cobra.Command, args []string) {
 	description := strings.Join(args, " ")
-	
+
 	// Auto-select qwen3:4b for code generation if available
 	selectedModel := model
 	if selectedModel == "" {
@@ -42,7 +42,7 @@ func runCodeCommand(cmd *cobra.Command, args []string) {
 			fmt.Println("No models found. Please install a model first using 'ollama pull <model-name>'")
 			os.Exit(1)
 		}
-		
+
 		// Prefer gemma3:4b for coding tasks
 		for _, modelName := range models {
 			if strings.Contains(strings.ToLower(modelName), "gemma3") {
@@ -50,12 +50,12 @@ func runCodeCommand(cmd *cobra.Command, args []string) {
 				break
 			}
 		}
-		
+
 		// Fallback to first non-embedding model
 		if selectedModel == "" {
 			selectedModel = ollamaClient.SelectChatModel(models)
 		}
-		
+
 		if selectedModel == "" {
 			fmt.Println("No suitable model found for code generation")
 			os.Exit(1)
@@ -144,7 +144,7 @@ func runCodeCommand(cmd *cobra.Command, args []string) {
 
 func init() {
 	rootCmd.AddCommand(codeCmd)
-	
+
 	codeCmd.Flags().StringVarP(&codeLanguage, "language", "l", "", "Programming language (e.g., python, javascript, go)")
 	codeCmd.Flags().StringVarP(&codeTemplate, "template", "t", "", "Prompt template to use (code_generation, debugging, optimization)")
 	codeCmd.Flags().BoolVar(&codeOptimize, "optimize", false, "Focus on code optimization")

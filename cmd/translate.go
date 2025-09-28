@@ -33,12 +33,12 @@ Examples:
 
 func runTranslateCommand(cmd *cobra.Command, args []string) {
 	text := strings.Join(args, " ")
-	
+
 	if targetLang == "" {
 		fmt.Println("Target language is required. Use --to flag")
 		os.Exit(1)
 	}
-	
+
 	// Auto-select qwen3:4b for translation if available
 	selectedModel := model
 	if selectedModel == "" {
@@ -51,7 +51,7 @@ func runTranslateCommand(cmd *cobra.Command, args []string) {
 			fmt.Println("No models found. Please install a model first using 'ollama pull <model-name>'")
 			os.Exit(1)
 		}
-		
+
 		// Prefer gemma3:4b for translation tasks
 		for _, modelName := range models {
 			if strings.Contains(strings.ToLower(modelName), "gemma3") {
@@ -59,12 +59,12 @@ func runTranslateCommand(cmd *cobra.Command, args []string) {
 				break
 			}
 		}
-		
+
 		// Fallback to first non-embedding model
 		if selectedModel == "" {
 			selectedModel = ollamaClient.SelectChatModel(models)
 		}
-		
+
 		if selectedModel == "" {
 			fmt.Println("No suitable model found for translation")
 			os.Exit(1)
@@ -76,7 +76,7 @@ func runTranslateCommand(cmd *cobra.Command, args []string) {
 		"prompt":          text,
 		"target_language": targetLang,
 	}
-	
+
 	if sourceLang != "" {
 		// Custom template for source->target translation
 		customTemplate := fmt.Sprintf(`You are a professional translator. Translate the following text from %s to %s accurately while preserving meaning and context:
@@ -85,13 +85,13 @@ func runTranslateCommand(cmd *cobra.Command, args []string) {
 **Target Language**: %s
 
 **Translation**:`, sourceLang, targetLang, sourceLang, targetLang)
-		
+
 		finalPrompt := customTemplate
 		for key, value := range variables {
 			placeholder := fmt.Sprintf("{{.%s}}", key)
 			finalPrompt = strings.ReplaceAll(finalPrompt, placeholder, value)
 		}
-		
+
 		if verbose {
 			fmt.Printf("Using model: %s\n", selectedModel)
 			fmt.Printf("From: %s\n", sourceLang)
@@ -125,7 +125,7 @@ func runTranslateCommand(cmd *cobra.Command, args []string) {
 			fmt.Printf("Error in translation: %v\n", err)
 			os.Exit(1)
 		}
-		
+
 	} else {
 		// Use template for auto-detected source language
 		finalPrompt, promptErr := templates.ApplyTemplate("translation", variables)
@@ -175,9 +175,9 @@ func runTranslateCommand(cmd *cobra.Command, args []string) {
 
 func init() {
 	rootCmd.AddCommand(translateCmd)
-	
+
 	translateCmd.Flags().StringVar(&targetLang, "to", "", "Target language (required)")
 	translateCmd.Flags().StringVar(&sourceLang, "from", "", "Source language (optional, auto-detect if not specified)")
-	
+
 	translateCmd.MarkFlagRequired("to")
 }

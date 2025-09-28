@@ -132,7 +132,7 @@ Please provide your solution:`,
 // ApplyTemplate applies a template with given variables
 func ApplyTemplate(templateName string, variables map[string]string) (string, error) {
 	templates := GetPromptTemplates()
-	
+
 	template, exists := templates[templateName]
 	if !exists {
 		return "", fmt.Errorf("template '%s' not found", templateName)
@@ -156,7 +156,7 @@ func ApplyTemplate(templateName string, variables map[string]string) (string, er
 // GetOptimalTemplate suggests the best template for a given prompt
 func GetOptimalTemplate(prompt string) string {
 	promptLower := strings.ToLower(prompt)
-	
+
 	// Code-related keywords
 	codeKeywords := []string{"function", "class", "method", "algorithm", "code", "program", "script", "implement", "write"}
 	for _, keyword := range codeKeywords {
@@ -213,10 +213,10 @@ func GetOptimalTemplate(prompt string) string {
 func ListTemplates() map[string]string {
 	templates := GetPromptTemplates()
 	result := make(map[string]string)
-	
+
 	for name, template := range templates {
 		result[name] = template.Description
 	}
-	
+
 	return result
 }

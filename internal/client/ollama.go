@@ -185,7 +185,7 @@ func (c *OllamaClient) SelectModelByCapability(models []string, capability strin
 		}
 	} else if capability == "rag" {
 		// For RAG, prefer faster, smaller models for better performance
-		fastModels := []string{"llama3.2:1b", "gemma2:2b", "qwen2.5:1.5b", "llama3.2:3b"}
+		fastModels := []string{"llama3.2:1b", "gemma3:4b", "qwen2.5:1.5b", "llama3.2:3b"}
 		for _, fast := range fastModels {
 			for _, model := range models {
 				if strings.Contains(strings.ToLower(model), fast) {

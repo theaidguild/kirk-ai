@@ -138,7 +138,7 @@ func cosineSimilarity(a, b []float64) float64 {
 }
 
 func searchSimilar(queryEmbedding []float64, embeddings []embeddingItem, topK int, threshold float64) []searchResult {
-	var results []searchResult
+	candidates := []searchResult{}
 
 	for _, item := range embeddings {
 		if len(item.Embedding) == 0 {
@@ -147,24 +147,44 @@ func searchSimilar(queryEmbedding []float64, embeddings []embeddingItem, topK in
 
 		similarity := cosineSimilarity(queryEmbedding, item.Embedding)
 		if similarity >= threshold {
-			results = append(results, searchResult{
-				Item:       item,
-				Similarity: similarity,
-			})
+			candidates = append(candidates, searchResult{Item: item, Similarity: similarity})
 		}
 	}
 
 	// Sort by similarity (descending)
-	sort.Slice(results, func(i, j int) bool {
-		return results[i].Similarity > results[j].Similarity
+	sort.SliceStable(candidates, func(i, j int) bool {
+		return candidates[i].Similarity > candidates[j].Similarity
 	})
 
-	// Limit to topK results
-	if topK > 0 && len(results) > topK {
-		results = results[:topK]
+	// Deduplicate by ID or content prefix and limit to topK
+	seen := map[string]bool{}
+	out := make([]searchResult, 0, len(candidates))
+	for _, c := range candidates {
+		if topK > 0 && len(out) >= topK {
+			break
+		}
+
+		key := c.Item.ID
+		if key == "" {
+			// Fallback to content prefix for deduplication; include chunk index if content missing
+			key = c.Item.Content
+			if key == "" {
+				key = fmt.Sprintf("chunk_%d", c.Item.ChunkIndex)
+			}
+			// Limit key length to avoid excessive map keys
+			if len(key) > 200 {
+				key = key[:200]
+			}
+		}
+
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
+		out = append(out, c)
 	}
 
-	return results
+	return out
 }
 
 func displaySearchResults(query string, results []searchResult) {
