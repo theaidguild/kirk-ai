@@ -34,6 +34,9 @@ Examples:
 func runTranslateCommand(cmd *cobra.Command, args []string) {
 	text := strings.Join(args, " ")
 
+	var response *models.ChatResponse
+	var err error
+
 	if targetLang == "" {
 		fmt.Println("Target language is required. Use --to flag")
 		os.Exit(1)
@@ -102,9 +105,6 @@ func runTranslateCommand(cmd *cobra.Command, args []string) {
 			fmt.Println("---")
 		}
 
-		var response *models.ChatResponse
-		var err error
-
 		if stream {
 			// Use streaming mode
 			response, err = ollamaClient.ChatStream(selectedModel, finalPrompt, func(chunk *models.StreamingChatResponse) error {
@@ -143,9 +143,6 @@ func runTranslateCommand(cmd *cobra.Command, args []string) {
 			fmt.Println("---")
 		}
 
-		var response *models.ChatResponse
-		var err error
-
 		if stream {
 			// Use streaming mode
 			response, err = ollamaClient.ChatStream(selectedModel, finalPrompt, func(chunk *models.StreamingChatResponse) error {
@@ -169,6 +166,16 @@ func runTranslateCommand(cmd *cobra.Command, args []string) {
 	}
 
 	if verbose {
+		if response != nil {
+			fmt.Printf("\n--- Response metadata ---\n")
+			fmt.Printf("Model: %s\n", response.Model)
+			fmt.Printf("Total duration: %d ns\n", response.TotalDuration)
+			fmt.Printf("Tokens evaluated: %d\n", response.EvalCount)
+			if response.EvalCount > 0 {
+				tokensPerSecond := float64(response.EvalCount) / (float64(response.EvalDuration) / 1e9)
+				fmt.Printf("Tokens per second: %.2f\n", tokensPerSecond)
+			}
+		}
 		fmt.Printf("\n--- Translation completed ---\n")
 	}
 }
