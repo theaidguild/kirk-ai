@@ -36,6 +36,13 @@ The specialized AI is designed for:
 
 - See `tools/processor/prepare_embeddings_data.go` and other helper scripts for implementation details. If you want me to add a single-command script or Make target that reproduces the pipeline, I can add it.
 
+## Demo video
+
+<video controls playsinline style="max-width:100%; height:auto; border-radius:8px; box-shadow:0 6px 20px rgba(0,0,0,0.45);">
+  <source src="assets/media/demo.mp4" type="video/mp4">
+  Your browser does not support HTML5 video playback. You can download the demo file instead: [Download demo](assets/media/demo.mp4).
+</video>
+
 ## Contributing
 
 - If you add more sources or correct metadata, include provenance (original URL, crawl date) and add tests that verify text processing edge cases.
