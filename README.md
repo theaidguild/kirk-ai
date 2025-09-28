@@ -186,6 +186,22 @@ func (c *OllamaClient) ChatStream(model, prompt string, callback func(string)) e
 }
 ```
 
+## Documentation (MkDocs)
+
+This repository uses MkDocs for its project documentation. The documentation source files are in `docs_src/` and the site is built and deployed automatically via GitHub Actions.
+
+To preview the documentation locally:
+
+```bash
+pip install mkdocs
+mkdocs serve -f mkdocs.yml
+```
+
+To publish changes:
+
+1. Edit Markdown files under `docs_src/`.
+2. Commit and push to `main` — the Pages workflow will build and deploy the site.
+
 ## GitHub Pages
 
 This repository includes a simple static site served from the `docs/` folder and an automated GitHub Actions workflow that deploys it on pushes to the `main` branch (`.github/workflows/pages.yml`). After the first successful deployment the site will be available at:

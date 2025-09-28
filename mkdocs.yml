@@ -1,0 +1,18 @@
+site_name: kirk-ai
+site_description: "CLI for interacting with Ollama AI models"
+repo_name: theaidguild/kirk-ai
+repo_url: https://github.com/theaidguild/kirk-ai
+
+docs_dir: docs_src
+site_dir: site
+
+theme:
+  name: readthedocs
+
+nav:
+  - Home: index.md
+  - Installation: installation.md
+  - Usage: usage.md
+  - Commands: commands.md
+  - Architecture: architecture.md
+  - Contributing: contributing.md
