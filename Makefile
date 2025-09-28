@@ -9,19 +9,20 @@ GO_FILES=$(shell find . -name "*.go" -not -path "./vendor/*")
 .PHONY: help
 help:
 	@echo "Available targets:"
-	@echo "  build       - Build the binary"
-	@echo "  clean       - Remove build artifacts"
-	@echo "  test        - Run tests"
-	@echo "  fmt         - Format Go code"
-	@echo "  vet         - Vet Go code"
-	@echo "  lint        - Lint Go code (requires golint)"
-	@echo "  deps        - Tidy and download dependencies"
-	@echo "  install     - Install the binary to GOPATH/bin"
-	@echo "  run         - Run the application"
-	@echo "  benchmark   - Run benchmark tests"
-	@echo "  models      - List available Ollama models"
-	@echo "  check-ollama - Check if Ollama is running"
-	@echo "  help        - Show this help"
+	@echo "  build          -  Build the binary"
+	@echo "  clean          -  Remove build artifacts"
+	@echo "  tests          -  Run tests"
+	@echo "  format         -  Format Go code"
+	@echo "  vet            -  Vet Go code"
+	@echo "  lint           -  Lint Go code (requires golint)"
+	@echo "  deps           -  Tidy and download dependencies"
+	@echo "  install        -  Install the binary to GOPATH/bin"
+	@echo "  run            -  Run the application"
+	@echo "  benchmarks     -  Run benchmark tests"
+	@echo "  models         -  List available Ollama models"
+	@echo "  check-ollama   -  Check if Ollama is running"
+	@echo "  uncrawl        -  Delete crawling data"
+	@echo "  help           -  Show this help"
 
 # Build the binary
 .PHONY: build
@@ -29,6 +30,12 @@ build:
 	@echo "Building $(BINARY_NAME)..."
 	@mkdir -p $(BUILD_DIR)
 	go build -o $(BUILD_DIR)/$(BINARY_NAME) .
+
+# Delete crawling data
+.PHONY: uncrawl
+uncrawl:
+	@echo "Deleting crawling data"
+	rm -rf tpusa_crawl
 
 # Clean build artifacts
 .PHONY: clean
