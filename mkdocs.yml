@@ -9,15 +9,9 @@ site_dir: site
 theme:
   name: material
   palette:
-    - scheme: default
-      primary: teal
-      accent: cyan
     - scheme: slate
       primary: teal
       accent: cyan
-      toggle:
-        icon: material/weather-night
-        name: Switch to dark mode
   features:
     - navigation.instant
     - navigation.indexes

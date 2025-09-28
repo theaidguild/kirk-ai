@@ -199,9 +199,7 @@ mkdocs serve -f mkdocs.yml
 
 #### Dark theme & UX
 
-The documentation site uses the Material for MkDocs theme with a dark-mode toggle. When viewing the site, use the theme toggle (top-right) to switch between light and dark modes. The site will also follow the visitor's system preference.
-
-To preview with the same theme locally, install the docs requirements and run the local server:
+The documentation site uses the Material for MkDocs theme in a dark-only configuration. The site is intentionally styled for a dark appearance and will not show a light-mode toggle. To preview the site locally with the same theme, install the docs requirements and run the local server:
 
 ```bash
 pip install -r docs_requirements.txt
