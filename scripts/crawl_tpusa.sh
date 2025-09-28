@@ -94,20 +94,27 @@ fi
 # --- START: URL filtering to avoid crawling unnecessary locations ---
 # Tunables (export to override)
 INCLUDE_HOST_REGEX="${INCLUDE_HOST_REGEX:-^https?://(www\.)?tpusa\.com}"
+EXCLUDE_HOST_REGEX="${EXCLUDE_HOST_REGEX:-rumble\.com}"
 EXCLUDE_EXTS="${EXCLUDE_EXTS:-pdf|jpg|jpeg|png|gif|zip|gz|tar|mp4|mp3|woff2?|svg|ico|css|js|json|rss|xml}"
 EXCLUDE_PATH_REGEX="${EXCLUDE_PATH_REGEX:-/search|/tag/|/author/|/calendar|/feed|/print|/amp/|/amp$}"
 HEAD_CONC="${HEAD_CONC:-10}"
 
-echo "Filtering discovered URLs (host whitelist, ext blacklist, path excludes, dedupe)..."
+echo "Filtering discovered URLs (host whitelist, host blacklist, ext blacklist, path excludes, dedupe)..."
 cat tpusa_crawl/discovered_urls.txt \
   | sed -E 's/^[[:space:]]+//;s/[[:space:]]+$//' \
   | sed -E 's/([?&])(utm_[^&]+|gclid|fbclid)=[^&]*(&|$)/\1/g' \
   | sed -E 's/[?&]$//' \
   | grep -E "$INCLUDE_HOST_REGEX" \
+  | grep -v -E "$EXCLUDE_HOST_REGEX" \
   | grep -v -E "\.($EXCLUDE_EXTS)(\?|$)" \
   | grep -v -E "$EXCLUDE_PATH_REGEX" \
   | sed -E 's:/$::' \
   | sort -u > tpusa_crawl/discovered_urls.filtered.txt
+
+# Log what hosts we are explicitly excluding for debugging
+if [ -n "${EXCLUDE_HOST_REGEX}" ]; then
+  echo "Excluding hosts matching: $EXCLUDE_HOST_REGEX"
+fi
 
 # Respect robots.txt Disallow rules (simple fixed-path exclusion)
 robots_file="$(mktemp)"
