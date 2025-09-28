@@ -50,7 +50,7 @@ See kirk-ai in action! The terminal below shows a live demonstration of the key 
 <!-- Terminal Controls -->
 <div class="termynal-controls">
     <button id="replayBtn" class="termynal-btn termynal-btn--replay">
-        ♾️ Replay
+        🔄 Replay
     </button>
     <button id="pauseBtn" class="termynal-btn termynal-btn--pause">
         ⏸️ Pause

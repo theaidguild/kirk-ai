@@ -198,12 +198,13 @@
 
 /* Different button variants */
 .termynal-btn--replay {
-    background: #3ec930;
+    background: transparent ;
+    border: 2px solid #5ed1e3;
     color: white;
 }
 
 .termynal-btn--replay:hover {
-    background: #36b82a;
+    background: transparent;
 }
 
 .termynal-btn--pause {
