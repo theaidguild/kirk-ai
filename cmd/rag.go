@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"kirk-ai/internal/client"
+	"kirk-ai/internal/models"
 
 	"github.com/spf13/cobra"
 )
@@ -178,6 +180,13 @@ func runRAGCommand(cmd *cobra.Command, args []string) {
 	}
 
 	// Generate answer using context with custom timeout if specified
+	// If streaming is enabled, stream the response and print chunks as they arrive.
+	if stream {
+		// Show a waiting message while the model prepares; the actual "Answer:" label
+		// will be printed when the first stream chunk arrives.
+		fmt.Println("Thinking...")
+	}
+
 	answerStart := time.Now()
 	answer, err := generateRAGAnswerWithTimeout(question, context, time.Duration(ragTimeout)*time.Second)
 	if err != nil {
@@ -190,9 +199,11 @@ func runRAGCommand(cmd *cobra.Command, args []string) {
 	}
 
 	// Display results
-	fmt.Printf("Question: %s\n", question)
+	// Do not print the user's question to avoid including 'Question: ...' in the output
 	fmt.Println(strings.Repeat("=", 60))
-	fmt.Printf("Answer: %s\n", answer)
+	if !stream {
+		fmt.Printf("Answer: %s\n", answer)
+	}
 
 	if verbose {
 		fmt.Printf("\nPerformance Summary:\n")
@@ -224,7 +235,7 @@ func getContentFromEmbedding(item embeddingItem) string {
 
 func generateRAGAnswerWithTimeout(question, context string, timeout time.Duration) (string, error) {
 	// Select chat model optimized for RAG
-	models, err := ollamaClient.ListModels()
+	modelsList, err := ollamaClient.ListModels()
 	if err != nil {
 		return "", err
 	}
@@ -233,23 +244,23 @@ func generateRAGAnswerWithTimeout(question, context string, timeout time.Duratio
 	var selectedModel string
 	if ragModel != "" {
 		// Try to match the provided model string against available models (exact or substring, case-insensitive)
-		for _, m := range models {
+		for _, m := range modelsList {
 			if strings.EqualFold(m, ragModel) || strings.Contains(strings.ToLower(m), strings.ToLower(ragModel)) {
 				selectedModel = m
 				break
 			}
 		}
 		if selectedModel == "" {
-			return "", fmt.Errorf("requested model %q not found. Available models: %v", ragModel, models)
+			return "", fmt.Errorf("requested model %q not found. Available models: %v", ragModel, modelsList)
 		}
 	} else {
 		// Use RAG-optimized model selection
-		selectedModel = ollamaClient.SelectModelByCapability(models, "rag")
+		selectedModel = ollamaClient.SelectModelByCapability(modelsList, "rag")
 		if ragPreferFast {
 			// Prefer smaller/faster model candidates when requested
 			fastCandidates := []string{"1b", "2.5", "qwen2.5", "llama3", "mistral", "gemma2"}
 			for _, pref := range fastCandidates {
-				for _, m := range models {
+				for _, m := range modelsList {
 					if strings.Contains(strings.ToLower(m), strings.ToLower(pref)) {
 						selectedModel = m
 						break
@@ -263,7 +274,7 @@ func generateRAGAnswerWithTimeout(question, context string, timeout time.Duratio
 
 		if selectedModel == "" {
 			// Fallback to regular chat model
-			selectedModel = selectChatModel(models)
+			selectedModel = selectChatModel(modelsList)
 		}
 	}
 
@@ -276,6 +287,9 @@ func generateRAGAnswerWithTimeout(question, context string, timeout time.Duratio
 			fmt.Printf("Using user-specified RAG model: %s\n", selectedModel)
 		} else {
 			fmt.Printf("Using RAG-optimized model: %s\n", selectedModel)
+		}
+		if stream {
+			fmt.Printf("Streaming: enabled\n")
 		}
 	}
 
@@ -293,6 +307,23 @@ Answer:`, context, question)
 	if timeout > 0 {
 		// Create client with custom timeout
 		customClient := client.NewOllamaClientWithTimeout(baseURL, timeout)
+		if stream {
+			// Stream using custom client
+			once := &sync.Once{}
+			resp, err := customClient.ChatStream(selectedModel, prompt, func(chunk *models.StreamingChatResponse) error {
+				once.Do(func() { fmt.Printf("Answer: ") })
+				fmt.Print(chunk.Message.Content)
+				return nil
+			})
+			// Ensure newline after stream
+			fmt.Println()
+			if err != nil {
+				return "", err
+			}
+			return resp.Message.Content, nil
+		}
+
+		// Non-streaming with custom timeout
 		chatResponse, err := customClient.Chat(selectedModel, prompt)
 		if err != nil {
 			return "", err
@@ -300,6 +331,22 @@ Answer:`, context, question)
 		return chatResponse.Message.Content, nil
 	} else {
 		// Use default client
+		if stream {
+			once := &sync.Once{}
+			resp, err := ollamaClient.ChatStream(selectedModel, prompt, func(chunk *models.StreamingChatResponse) error {
+				once.Do(func() { fmt.Printf("Answer: ") })
+				fmt.Print(chunk.Message.Content)
+				return nil
+			})
+			// Ensure newline after stream
+			fmt.Println()
+			if err != nil {
+				return "", err
+			}
+			return resp.Message.Content, nil
+		}
+
+		// Non-streaming default
 		chatResponse, err := ollamaClient.Chat(selectedModel, prompt)
 		if err != nil {
 			return "", err
