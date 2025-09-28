@@ -2,10 +2,6 @@ site_name: kirk-ai
 site_description: "kirk-ai — CLI for interacting with Ollama AI models"
 site_author: The Aid Guild
 
-# Logo and favicon
-logo: assets/images/logo.svg
-favicon: assets/images/logo.svg
-
 # Edit URI (optional) — enable 'Edit on GitHub' links
 edit_uri: blob/main/
 
@@ -16,6 +12,8 @@ site_dir: site
 
 theme:
   name: material
+  logo: assets/images/logo.svg
+  favicon: assets/images/logo.svg
   palette:
     - scheme: slate
       primary: teal
