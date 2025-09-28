@@ -20,11 +20,36 @@ jobs:
           persist-credentials: true
           fetch-depth: 0
 
+      - name: Show workspace (diagnostic)
+        run: |
+          echo "Workspace: $(pwd)"
+          echo "Listing root files:" && ls -la
+          echo "Checking docs/ presence..."
+          if [ -d "docs" ]; then
+            echo "docs/ exists. Listing docs/:" && ls -la docs
+          else
+            echo "ERROR: docs/ directory not found in repository workspace." && exit 1
+          fi
+
+      - name: Ensure .nojekyll exists inside docs (will be copied to root of published branch)
+        run: |
+          if [ ! -f docs/.nojekyll ]; then
+            echo "Creating docs/.nojekyll to disable Jekyll on the published branch";
+            touch docs/.nojekyll;
+            git config --global user.email "actions@github.com";
+            git config --global user.name "GitHub Actions";
+            git add docs/.nojekyll;
+            git commit -m "chore: add .nojekyll to docs for Pages" || echo "No changes to commit";
+          else
+            echo "docs/.nojekyll already present";
+          fi
+
       - name: Deploy to GitHub Pages (gh-pages branch)
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./docs
+          nojekyll: true
           # Optional: set the branch name (defaults to gh-pages)
           # publish_branch: gh-pages
 
