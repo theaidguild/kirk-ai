@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"flag"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -12,20 +11,6 @@ import (
 
 	"github.com/chromedp/chromedp"
 )
-
-func readURLsFromFile(path string) ([]string, error) {
-	b, err := ioutil.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-	lines := []string{}
-	for _, l := range strings.Split(string(b), "\n") {
-		if s := strings.TrimSpace(l); s != "" {
-			lines = append(lines, s)
-		}
-	}
-	return lines, nil
-}
 
 func runChromedpCrawler() {
 	var urlFile string

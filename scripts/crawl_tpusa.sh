@@ -9,6 +9,13 @@ CHROMEDP_CONC="${CHROMEDP_CONC:-3}"   # number of parallel chromedp workers
 SKIP_CHROMEDP="${SKIP_CHROMEDP:-0}"   # set to 1 to skip chromedp step
 BUILD_DIR="./build/tools"
 
+# Crawler concurrency knobs
+CRAWLER_PROCS="${CRAWLER_PROCS:-6}"         # total number of crawler processes to use when splitting
+COLLY_PROCS="${COLLY_PROCS:-3}"             # how many colly processes to spawn
+REQUESTS_PROCS="${REQUESTS_PROCS:-2}"       # how many requests processes to spawn
+COLLY_PARALLEL="${COLLY_PARALLEL:-4}"       # per-colly-process parallelism (colly Limit Parallelism)
+REQUESTS_WORKERS="${REQUESTS_WORKERS:-4}"   # per-requests-process worker count
+
 mkdir -p tpusa_crawl/{raw_html,processed_data,embeddings,logs}
 mkdir -p "$BUILD_DIR"
 
@@ -145,10 +152,36 @@ rm -f tpusa_crawl/discovered_urls.filtered.txt tpusa_crawl/robots_exclude.txt ||
 # Make this stage tolerant to SIGINT so we can continue to processing on Ctrl+C.
 set +e
 echo "Starting crawlers in parallel (colly + requests + api)..."
-"$CRAWLER_BIN" colly 2>&1 | tee tpusa_crawl/logs/colly.log &
-pids+=($!)
-"$CRAWLER_BIN" requests 2>&1 | tee tpusa_crawl/logs/requests.log &
-pids+=($!)
+
+NUM_URLS=$(wc -l < tpusa_crawl/discovered_urls.txt || echo 0)
+
+# Helper to split and launch workers for a given mode and worker count
+launch_workers() {
+  local mode="$1"; shift
+  local procs="$1"; shift
+  local extra_args="$@"
+  if [ "$NUM_URLS" -le 0 ]; then
+    echo "No discovered URLs to feed to $mode — skipping"
+    return
+  fi
+  chunk_size=$(( (NUM_URLS + procs - 1) / procs ))
+  split_prefix="tpusa_crawl/discovered_urls.${mode}.part."
+  rm -f ${split_prefix}*
+  split -l "$chunk_size" tpusa_crawl/discovered_urls.txt "$split_prefix"
+  for part in ${split_prefix}*; do
+    [ -s "$part" ] || continue
+    log="tpusa_crawl/logs/${mode}.$(basename "$part").log"
+    echo "Launching $mode worker for $(wc -l < "$part") URLs -> $log"
+    "$CRAWLER_BIN" "$mode" -urls "$part" $extra_args 2>&1 | tee "$log" &
+    pids+=($!)
+  done
+}
+
+# Launch colly workers
+launch_workers colly "$COLLY_PROCS" "-parallel ${COLLY_PARALLEL}"
+# Launch requests workers
+launch_workers requests "$REQUESTS_PROCS" "-workers ${REQUESTS_WORKERS}"
+# Run API collector once (lightweight)
 "$CRAWLER_BIN" api 2>&1 | tee tpusa_crawl/logs/api_collector.log &
 pids+=($!)
 

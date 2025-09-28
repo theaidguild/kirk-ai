@@ -2,12 +2,14 @@ package main
 
 import (
 	"encoding/json"
+	"flag"
 	"log"
 	"net/http"
 	"net/url"
 	"os"
 	"regexp"
 	"strings"
+	"sync"
 
 	"github.com/PuerkitoBio/goquery"
 )
@@ -28,6 +30,75 @@ func isCrawlable(u string) bool {
 
 // main was renamed to runRequestsCrawler so this file can be part of a multi-tool package
 func runRequestsCrawler() {
+	var urlFile string
+	var workers int
+	flag.StringVar(&urlFile, "urls", "", "file with URLs to fetch (each URL fetched once)")
+	flag.IntVar(&workers, "workers", 4, "number of parallel fetch workers for requests crawler when -urls is used")
+	flag.Parse()
+
+	if urlFile != "" {
+		// Fast parallel fetch of provided URL list
+		urls, err := readURLsFromFile(urlFile)
+		if err != nil {
+			log.Fatalf("could not read urls file: %v", err)
+		}
+
+		var mu sync.Mutex
+		var data []map[string]interface{}
+		jobs := make(chan string)
+		wg := sync.WaitGroup{}
+
+		// Spawn workers
+		for i := 0; i < workers; i++ {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				for u := range jobs {
+					doc, err := fetchAndParse(u)
+					if err != nil {
+						log.Println("error fetching", u, err)
+						continue
+					}
+					page := map[string]interface{}{
+						"url":   u,
+						"title": strings.TrimSpace(doc.Find("title").Text()),
+					}
+					main := doc.Find("main").First()
+					if main.Length() == 0 {
+						main = doc.Find("body")
+					}
+					paras := []string{}
+					main.Find("p").Each(func(i int, s *goquery.Selection) {
+						if t := strings.TrimSpace(s.Text()); t != "" {
+							paras = append(paras, t)
+						}
+					})
+					page["content"] = strings.Join(paras, " ")
+
+					mu.Lock()
+					data = append(data, page)
+					mu.Unlock()
+				}
+			}()
+		}
+
+		// Push jobs
+		for _, u := range urls {
+			jobs <- u
+		}
+		close(jobs)
+		wg.Wait()
+
+		b, _ := json.MarshalIndent(data, "", "  ")
+		out := "tpusa_crawl/requests_results.json"
+		if err := os.WriteFile(out, b, 0o644); err != nil {
+			log.Fatalf("write: %v", err)
+		}
+		log.Printf("requests crawler: saved %d pages to %s", len(data), out)
+		return
+	}
+
+	// Fallback: existing BFS single-process crawler
 	start := []string{"https://tpusa.com/", "https://tpusa.com/about/"}
 	visited := map[string]struct{}{}
 	queue := make([]string, 0)

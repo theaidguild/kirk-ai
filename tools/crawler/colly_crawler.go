@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
 	"log"
 	"net/url"
@@ -22,6 +23,12 @@ func sanitizeFilename(u string) string {
 }
 
 func runCollyCrawler() {
+	var urlFile string
+	var parallel int
+	flag.StringVar(&urlFile, "urls", "tpusa_crawl/discovered_urls.txt", "file with URLs to fetch")
+	flag.IntVar(&parallel, "parallel", 4, "colly parallelism per process")
+	flag.Parse()
+
 	outDir := "tpusa_crawl/raw_html"
 	ensureDir(outDir)
 	jsonOut := "tpusa_crawl/colly_results.json"
@@ -32,7 +39,7 @@ func runCollyCrawler() {
 		colly.Async(true),
 	)
 
-	c.Limit(&colly.LimitRule{DomainGlob: "*tpusa.*", Parallelism: 2, Delay: 2 * time.Second})
+	c.Limit(&colly.LimitRule{DomainGlob: "*tpusa.*", Parallelism: parallel, Delay: 500 * time.Millisecond})
 
 	var results []map[string]interface{}
 	c.OnHTML("html", func(e *colly.HTMLElement) {
@@ -81,12 +88,20 @@ func runCollyCrawler() {
 	c.OnError(func(r *colly.Response, err error) { log.Printf("error %s: %v", r.Request.URL.String(), err) })
 
 	start := "https://tpusa.com/"
-	u, _ := url.Parse(start)
 	// seed sitemap discovery alongside crawler
+	u, _ := url.Parse(start)
 	sitemapURL := fmt.Sprintf("%s://%s/sitemap.xml", u.Scheme, u.Host)
 	log.Println("seeding with sitemap", sitemapURL)
-	// attempt to visit sitemap first (colly will ignore non-HTML but we use sitemap for link discovery)
 	c.Visit(sitemapURL)
+
+	// If a urls file is provided, use it as seeds (overrides default start)
+	if _, err := os.Stat(urlFile); err == nil {
+		if urls, err := readURLsFromFile(urlFile); err == nil && len(urls) > 0 {
+			for _, u := range urls {
+				c.Visit(u)
+			}
+		}
+	}
 
 	if err := c.Visit(start); err != nil {
 		log.Fatalf("visit start: %v", err)
