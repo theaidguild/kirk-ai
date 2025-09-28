@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"flag"
+	"io"
 	"log"
 	"net"
 	"net/http"
@@ -112,50 +113,229 @@ func fetchAndParse(ctx context.Context, u string) (*goquery.Document, error) {
 	return nil, lastErr
 }
 
-// robots cache and mutex
-var robotsCache = make(map[string]*robotstxt.RobotsData)
-var robotsMu sync.Mutex
+// robots cache and mutex (now with a small cache entry struct and a lightweight single-flight)
+type robotsCacheEntry struct {
+	data      *robotstxt.RobotsData
+	fetchedAt time.Time
+	failed    bool
+}
+
+var (
+	robotsCache          = make(map[string]*robotsCacheEntry)
+	robotsMu             sync.Mutex
+	fetchInProgress      = make(map[string]chan struct{})
+	robotsFetchErrorOnce = make(map[string]struct{}) // hosts that already logged an error
+)
+
+const (
+	robotsCacheTTL         = 30 * time.Minute
+	robotsNegativeCacheTTL = 10 * time.Minute
+)
+
+// File-backed robots cache structures and helpers
+type robotsFileCacheEntry struct {
+	Body      string    `json:"body"`
+	FetchedAt time.Time `json:"fetched_at"`
+	Failed    bool      `json:"failed"`
+}
+
+var (
+	robotsFileCache     = make(map[string]*robotsFileCacheEntry)
+	robotsFileCacheOnce sync.Once
+	robotsCacheFilePath = "tpusa_crawl/robots_cache.json"
+)
+
+// loadRobotsFileCache reads the cache file (if present) and populates the in-memory cache.
+// It is safe to call multiple times; sync.Once ensures it runs only once per process.
+func loadRobotsFileCache() {
+	robotsMu.Lock()
+	defer robotsMu.Unlock()
+	b, err := os.ReadFile(robotsCacheFilePath)
+	if err != nil {
+		// no file yet is fine
+		return
+	}
+	var fileMap map[string]*robotsFileCacheEntry
+	if err := json.Unmarshal(b, &fileMap); err != nil {
+		log.Printf("requests crawler: could not parse robots cache file: %v", err)
+		return
+	}
+	robotsFileCache = fileMap
+	// populate in-memory robotsCache from file entries
+	for host, fe := range robotsFileCache {
+		if fe == nil {
+			continue
+		}
+		age := time.Since(fe.FetchedAt)
+		if fe.Failed && age < robotsNegativeCacheTTL {
+			robotsCache[host] = &robotsCacheEntry{data: nil, fetchedAt: fe.FetchedAt, failed: true}
+			continue
+		}
+		if fe.Body != "" && age < robotsCacheTTL {
+			rdata, err := robotstxt.FromBytes([]byte(fe.Body))
+			if err != nil {
+				continue
+			}
+			robotsCache[host] = &robotsCacheEntry{data: rdata, fetchedAt: fe.FetchedAt, failed: false}
+		}
+	}
+}
+
+// writeRobotsFileCache writes the entire robotsFileCache map to disk (overwrites atomically).
+func writeRobotsFileCache() {
+	robotsMu.Lock()
+	defer robotsMu.Unlock()
+	_ = os.MkdirAll("tpusa_crawl", 0o755)
+	b, err := json.MarshalIndent(robotsFileCache, "", "  ")
+	if err != nil {
+		log.Printf("requests crawler: could not marshal robots cache: %v", err)
+		return
+	}
+	// write atomically
+	tmp := robotsCacheFilePath + ".tmp"
+	if err := os.WriteFile(tmp, b, 0o644); err != nil {
+		log.Printf("requests crawler: could not write robots cache tmp file: %v", err)
+		return
+	}
+	if err := os.Rename(tmp, robotsCacheFilePath); err != nil {
+		log.Printf("requests crawler: could not rename robots cache file: %v", err)
+	}
+}
+
+// helper to update file cache for a host; callers must hold robotsMu or this will lock internally
+func updateRobotsFileCache(host string, body string, failed bool, fetchedAt time.Time) {
+	robotsMu.Lock()
+	defer robotsMu.Unlock()
+	if robotsFileCache == nil {
+		robotsFileCache = make(map[string]*robotsFileCacheEntry)
+	}
+	robotsFileCache[host] = &robotsFileCacheEntry{Body: body, FetchedAt: fetchedAt, Failed: failed}
+	// persist synchronously to keep processes in sync (fast, relatively small file)
+	go writeRobotsFileCache()
+}
 
 // isAllowedByRobots checks robots.txt for the URL's host and returns whether the given path is allowed
 func isAllowedByRobots(ctx context.Context, raw string) bool {
+	// ensure file-backed cache is loaded once per process
+	robotsFileCacheOnce.Do(loadRobotsFileCache)
+
 	parsed, err := url.Parse(raw)
 	if err != nil || parsed.Host == "" {
 		return false
 	}
-	host := parsed.Scheme + "://" + parsed.Host
+	host := parsed.Host // host-only cache key (dedupe http/https)
 
+	// Fast-path: check cache under lock
 	robotsMu.Lock()
-	data, ok := robotsCache[host]
-	robotsMu.Unlock()
-	if !ok {
-		// fetch robots.txt
-		robotsURL := host + "/robots.txt"
+	if entry, ok := robotsCache[host]; ok {
+		age := time.Since(entry.fetchedAt)
+		if !entry.failed && age < robotsCacheTTL && entry.data != nil {
+			data := entry.data
+			robotsMu.Unlock()
+			group := data.FindGroup("kirk-ai-crawler")
+			if group == nil {
+				group = data.FindGroup("*")
+			}
+			return group.Test(parsed.Path)
+		}
+		if entry.failed && age < robotsNegativeCacheTTL {
+			// Recent negative result — fail-open
+			robotsMu.Unlock()
+			return true
+		}
+	}
+
+	// If someone else is fetching robots for this host, wait for them to finish (single-flight)
+	if ch, fetching := fetchInProgress[host]; fetching {
+		// increase concurrency-friendly wait while not holding robotsMu
+		robotsMu.Unlock()
+		select {
+		case <-ch:
+			// fetch completed by other goroutine; re-check cache
+			robotsMu.Lock()
+			if entry, ok := robotsCache[host]; ok {
+				age := time.Since(entry.fetchedAt)
+				if !entry.failed && age < robotsCacheTTL && entry.data != nil {
+					data := entry.data
+					robotsMu.Unlock()
+					group := data.FindGroup("kirk-ai-crawler")
+					if group == nil {
+						group = data.FindGroup("*")
+					}
+					return group.Test(parsed.Path)
+				}
+				if entry.failed && age < robotsNegativeCacheTTL {
+					robotsMu.Unlock()
+					return true
+				}
+			}
+			robotsMu.Unlock()
+			// No usable cache after wait — fallthrough to fetch below
+		case <-ctx.Done():
+			robotsMu.Unlock()
+			return true
+		}
+	} else {
+		// mark that we're fetching to prevent other goroutines from duplicating work
+		ch := make(chan struct{})
+		fetchInProgress[host] = ch
+		robotsMu.Unlock()
+
+		// perform fetch
+		robotsURL := parsed.Scheme + "://" + host + "/robots.txt"
 		req, _ := http.NewRequestWithContext(ctx, "GET", robotsURL, nil)
 		req.Header.Set("User-Agent", "kirk-ai-crawler/1.0")
-		resp, err := httpClient.Do(req)
-		if err != nil || resp == nil {
-			// If robots.txt can't be fetched, default to allowing (fail-open) but log
-			if err != nil {
-				log.Printf("requests crawler: could not fetch robots.txt for %s: %v", host, err)
+		resp, ferr := httpClient.Do(req)
+		var rdata *robotstxt.RobotsData
+		var fetchErr error
+		if ferr != nil || resp == nil {
+			fetchErr = ferr
+		} else {
+			// read body so we can persist robots.txt for other processes
+			bodyBytes, readErr := io.ReadAll(resp.Body)
+			resp.Body.Close()
+			if readErr != nil {
+				fetchErr = readErr
+			} else {
+				rdata, ferr = robotstxt.FromBytes(bodyBytes)
+				if ferr != nil {
+					fetchErr = ferr
+				}
+				// persist to file-backed cache (body may be empty if parse failed)
+				updateRobotsFileCache(host, string(bodyBytes), fetchErr != nil, time.Now())
 			}
-			return true
 		}
-		defer resp.Body.Close()
-		rdata, err := robotstxt.FromResponse(resp)
-		if err != nil {
-			log.Printf("requests crawler: could not parse robots.txt for %s: %v", host, err)
-			return true
-		}
+
 		robotsMu.Lock()
-		robotsCache[host] = rdata
+		if fetchErr != nil {
+			// negative cache and one-time logging
+			robotsCache[host] = &robotsCacheEntry{data: nil, fetchedAt: time.Now(), failed: true}
+			if _, logged := robotsFetchErrorOnce[host]; !logged {
+				robotsFetchErrorOnce[host] = struct{}{}
+				log.Printf("requests crawler: could not fetch robots.txt for %s: %v", host, fetchErr)
+			}
+		} else {
+			robotsCache[host] = &robotsCacheEntry{data: rdata, fetchedAt: time.Now(), failed: false}
+		}
+		// signal waiters
+		close(fetchInProgress[host])
+		delete(fetchInProgress, host)
 		robotsMu.Unlock()
-		data = rdata
+
+		if fetchErr != nil {
+			return true
+		}
+
+		group := rdata.FindGroup("kirk-ai-crawler")
+		if group == nil {
+			group = rdata.FindGroup("*")
+		}
+		return group.Test(parsed.Path)
 	}
-	group := data.FindGroup("kirk-ai-crawler")
-	if group == nil {
-		group = data.FindGroup("*")
-	}
-	return group.Test(parsed.Path)
+
+	// If we reach here, no cache and no fetch in progress — try to fetch (should be rare)
+	robotsMu.Unlock()
+	return true
 }
 
 // isCrawlable returns false for assets, external hosts we want to avoid, and other known non-HTML patterns.
